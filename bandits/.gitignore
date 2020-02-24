@@ -1,0 +1,6 @@
+figure
+.ipynb*
+*.aux
+*latexmk
+*.fls
+*.log
