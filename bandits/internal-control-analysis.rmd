@@ -1,0 +1,98 @@
+---
+documentclass: extarticle
+fontsize: 8pt
+---
+# Analysis
+
+```{r,  warning=FALSE}
+  library(ggplot2)
+  theme_set(theme_minimal())
+
+  library(purrr)
+  library(pracma)
+  library(dplyr)
+  library(plyr)
+  library(stringr)
+  library(scales)
+  library(repr)
+  options(repr.plot.width=4, repr.plot.height=3)
+
+  df <- read.csv("internal-control-experiments.csv")
+  df$iteration=factor(df$iteration)
+  which.nonnum <- function(x) {
+    which(is.na(suppressWarnings(as.numeric(as.character(x)))))
+  }
+
+  df$time=as.POSIXct(df$time/1000000, origin="1970-01-01")
+  unique(df$name)
+  unique(df$variable)
+  pStatic=200
+```
+
+```{r}
+  df_control = df[which(df["name"] == "controlOn"),]
+
+  df_pcap110 = df[which(df["name"] == "pcap110"),]
+
+  df_rapl = df[which(df$variable == "sensor-RaplKey (PackageID 0)"), c("name","value","iteration","time")]
+  df_rapl$value=as.numeric(as.character(df_rapl$value))
+
+  df_progress = df[which(df$variable == "sensor-Downstream"), c("name","value","iteration")]
+  df_progress$value=as.numeric(as.character(df_progress$value))
+
+  df_runtime = df[df$variable=="sensor-RaplKey (PackageID 0)", c("name","iteration","time")]
+  df_runtime$value=as.numeric(as.character(df_progress$value))
+
+  integrateWattHours <- function(ts,vs) {
+    return(tail(cumtrapz(as.numeric(ts)/3600,vs),n=1))
+  }
+
+  df_rapl = ddply(df_rapl, .(name,iteration), summarize, wh=integrateWattHours(time,value))
+  df_progress = ddply(df_progress, .(name,iteration), summarize, instructions=sum(value))
+  df_runtime = ddply(df_runtime, .(name,iteration), summarize, runtime=max(time)-min(time))
+  df_post =  df_runtime %>%
+    full_join(.,df_rapl,by=c("name","iteration")) %>%
+    full_join(.,df_progress,by=c("name","iteration"))
+  df_reference= filter(df_post, name == "pcap210")
+  runtime_reference = mean(df_reference$runtime)
+  df_post$constraintBreach = df_post$runtime > (1.1 * runtime_reference)
+  print(df_post)
+  print(runtime_reference)
+```
+
+```{r, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+  ggplot(data=df_post, aes(x=name, y=wh) ) +
+    geom_boxplot() +
+    scale_x_discrete(limits=c( "pcap60", "pcap75","pcap100", "pcap110", "pcap120","pcap150", "pcap180", "pcap210", "controlOn"
+       ))
+```
+
+```{r, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+  ggplot(data=df_post, aes(x=name, y=runtime) ) +
+    geom_boxplot() +
+    scale_x_discrete(limits=c( "pcap60", "pcap75","pcap100", "pcap110", "pcap120","pcap150", "pcap180", "pcap210", "controlOn"
+       ))
+```
+
+```{r, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+  ggplot(data=df_pcap110, aes(time, as.numeric(as.character(value)),group=iteration,color=iteration) )+
+    geom_point() +
+    geom_line() +
+    facet_grid(rows = vars(variable), scales="free_y") +
+    scale_x_datetime()
+```
+
+```{r, fig.cap="", dev="pdf", fig.width=11, fig.height=15}
+  ggplot(df_control[which(df_control["variable"] != "actionType"),], aes(x=time, y=as.numeric(as.character(value)), group=iteration,color=iteration) )+
+    geom_line() +
+    geom_point() +
+    facet_grid(rows = vars(variable),scales="free_y") +
+    scale_x_datetime()
+```
+```{r, fig.cap="", dev="pdf", fig.width=11, fig.height=2}
+  ggplot(df_control[which(df_control["variable"] == "actionType"),], aes(x=time, y=as.character(value), group=iteration,color=iteration) )+
+    geom_line() +
+    geom_point() +
+    facet_grid(rows = vars(variable),scales="free_y") +
+    scale_x_datetime()
+```
