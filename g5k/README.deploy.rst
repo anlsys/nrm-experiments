@@ -113,7 +113,7 @@ traffic (see https://www.grid5000.fr/w/SSH#Forwarding_a_local_port).
 We suppose the :command:`ssh` configuration works.
 
 From the local machine (replace elements between brackets as needed), the
-command looks like :samp:`ssh {g5k_site_frontend} -N -L {local_port}:{g5k_node}:{jupyter_port}`).
+command looks like :samp:`ssh {g5k_site_frontend} -N -L {local_port}:{g5k_node}:{jupyter_port}`.
 
 With the example above:
 
