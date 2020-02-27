@@ -25,7 +25,7 @@ for i in range(0, experimentSamplingSize):
         daemonCfgs[(i, "pcap" + str(cap))] = {
             "controlCfg": {"fixedPower": {"fromuW": cap * 1000000}}
         }
-    daemonCfgs[(i, "controlOn")] = (
+    daemonCfgs[(i, "controlOn")] =
         {
             "controlCfg": {
                 "staticPower": {"fromuW": staticPower},
@@ -39,8 +39,7 @@ for i in range(0, experimentSamplingSize):
                 "raplFrequency": {"fromHz": 1},
                 "raplPath": "/sys/devices/virtual/powercap/intel-rapl",
             },
-        },
-    )
+        }
 
 
 def perfwrapped(cmd, args):
