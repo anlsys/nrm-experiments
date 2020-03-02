@@ -30,42 +30,34 @@ fontsize: 8pt
 ```
 
 ```{r}
-  df_rapl0 = df[which ("sensor-RaplKey (PackageID 1)"==df$variable ), c("name","value","iteration","time")]
-  df_rapl0$value=as.numeric(as.character(df_rapl0$value))
-  df_rapl1 = df[which ("sensor-RaplKey (PackageID 0)"==df$variable ), c("name","value","iteration","time")]
+  df_control = df[which(df["name"] == "controlOn"),]
 
-  df_rapl1$value=as.numeric(as.character(df_rapl1$value))
+  df_pcap110 = df[which(df["name"] == "pcap110"),]
 
-  df_rapl =
-      bind_rows(df_rapl0, df_rapl1) %>%
-          group_by(name,iteration,time) %>%
-          summarise_all(sum)
+  df_rapl = df[which(df$variable == "sensor-RaplKey (PackageID 0)"), c("name","value","iteration","time")]
   df_rapl$value=as.numeric(as.character(df_rapl$value))
+
+  df_progress = df[which(df$variable == "sensor-Downstream"), c("name","value","iteration")]
+  df_progress$value=as.numeric(as.character(df_progress$value))
+
+  df_runtime = df[df$variable=="sensor-RaplKey (PackageID 0)", c("name","iteration","time")]
+  df_runtime$value=as.numeric(as.character(df_progress$value))
+
   integrateWattHours <- function(ts,vs) {
     return(tail(cumtrapz(as.numeric(ts)/3600,vs),n=1))
   }
+
   df_rapl = ddply(df_rapl, .(name,iteration), summarize, wh=integrateWattHours(time,value))
-  colnames(df_rapl)<-c("name","iteration","wh")
-  summary(df_rapl)
-
-  df_progress = df[which(grepl("sensor-Downstream",df$variable )), c("name","value","iteration")]
-  df_progress$value=as.numeric(as.character(df_progress$value))
   df_progress = ddply(df_progress, .(name,iteration), summarize, instructions=sum(value))
-  summary(df_progress)
-
-  df_runtime = df[, c("name","iteration","time")]
-  df_runtime$value=as.numeric(as.character(df_runtime$value))
   df_runtime = ddply(df_runtime, .(name,iteration), summarize, runtime=max(time)-min(time))
-  summary(df_runtime)
-
   df_post =  df_runtime %>%
     full_join(.,df_rapl,by=c("name","iteration")) %>%
     full_join(.,df_progress,by=c("name","iteration"))
-
   df_reference= filter(df_post, name == "pcap210")
   runtime_reference = mean(df_reference$runtime)
   df_post$constraintBreach = df_post$runtime > (1.1 * runtime_reference)
-  summary(df_post)
+  print(df_post)
+  print(runtime_reference)
 ```
 
 ```{r, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
@@ -83,7 +75,7 @@ fontsize: 8pt
 ```
 
 ```{r, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  ggplot(data=df[which(df$name=="pcap210"),], aes(time, as.numeric(as.character(value)),group=iteration,color=iteration) )+
+  ggplot(data=df_pcap110, aes(time, as.numeric(as.character(value)),group=iteration,color=iteration) )+
     geom_point() +
     geom_line() +
     facet_grid(rows = vars(variable), scales="free_y") +
@@ -91,7 +83,6 @@ fontsize: 8pt
 ```
 
 ```{r, fig.cap="", dev="pdf", fig.width=11, fig.height=15}
-  df_control=df[which(df$name=="controlOn"),]
   ggplot(df_control[which(df_control["variable"] != "actionType"),], aes(x=time, y=as.numeric(as.character(value)), group=iteration,color=iteration) )+
     geom_line() +
     geom_point() +
