@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+import sys
 import json
 import time
 from collections import defaultdict
@@ -13,12 +14,6 @@ from functools import reduce
 
 import nrm.tooling as nrm
 
-experimentSamplingSize = 2
-powerCapRanges = [60, 75, 60, 100, 110, 120, 150, 180, 210]
-staticPower = 200000000
-referenceMeasurementRoundInterval = 10
-
-daemonCfgs = {}
 
 def perfwrapped(cmd, args):
     return [
@@ -40,14 +35,11 @@ def perfwrapped(cmd, args):
     ]
 
 
-
-
 def do_workload(host, daemonCfg, workload):
     host.start_daemon(daemonCfg)
     print("Starting the workload")
     host.run_workload(workload)
     history = defaultdict(list)
-    # print(host.get_state())
     getCPD = True
     try:
         while host.check_daemon() and not host.workload_finished():
@@ -69,13 +61,10 @@ def do_workload(host, daemonCfg, workload):
                 content = msg["pubMeasurements"][1][0]
                 t = content["time"]
                 sensorID = content["sensorID"]
+                if "Downstream" in sensorID:
+                    sensorID="sensor-Downstream"
                 x = content["sensorValue"]
-                print(
-                    ".",
-                    end=""
-                    # "Measurement: originating at time %s for sensor %s of value %s"
-                    #% (content["time"], content["sensorID"], content["sensorValue"])
-                )
+                print(".", end="")
                 history["sensor-" + sensorID].append((t, x))
             if "pubCPD" in msg:
                 print("R")
@@ -113,22 +102,23 @@ def do_workload(host, daemonCfg, workload):
                         "weights"
                     ]:
                         value = arm["action"][0]["actuatorValue"]
-                        history[str(value / 1000000) + "-probability"].append(
-                            (t, arm["probability"]["getProbability"])
-                        )
-                        history[str(value / 1000000) + "-cumulativeLoss"].append(
-                            (t, arm["cumulativeLoss"]["getCumulativeLoss"])
-                        )
-                # print(
-                # "Action: originating at time %s for actuator %s of value %s"
-                #% (t,actuatorID,x)
-                # )
+                        ids = [a["actuatorID"] for a in arm["action"]]
+                        print(ids)
+                        history[
+                            str(ids) + str(value / 1000000) + "-probability"
+                        ].append((t, arm["probability"]["getProbability"]))
+                        history[
+                            str(ids) + str(value / 1000000) + "-cumulativeLoss"
+                        ].append((t, arm["cumulativeLoss"]["getCumulativeLoss"]))
             host.check_daemon()
         print("")
     except:
+        e = sys.exc_info()[0]
+        print(e)
         return history
     host.stop_daemon()
     return history
+
 
 def history_to_dataframe(key, history):
     iteration, name = key
