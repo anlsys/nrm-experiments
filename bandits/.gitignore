@@ -1,4 +1,5 @@
 figure
+*.csv
 .ipynb*
 *.aux
 *latexmk

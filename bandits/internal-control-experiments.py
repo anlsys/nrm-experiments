@@ -59,10 +59,6 @@ for key, cfg in daemonCfgs.items():
 
 import pickle
 
-f = open("dict.pkl", "wb")
-pickle.dump(results, f)
-f.close()
-
 result_df = pd.concat(
     [experiment.history_to_dataframe(key, history) for key, history in results.items()]
 )
