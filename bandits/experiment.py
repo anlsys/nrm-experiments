@@ -69,8 +69,6 @@ def do_workload(host, daemonCfg, workload):
             if "pubCPD" in msg:
                 print("R")
             if "pubAction" in msg:
-                # print(host.get_state())
-                # print(msg)
                 t, contents, meta, controller = msg["pubAction"]
                 if "bandit" in controller.keys():
                     for key in meta.keys():
@@ -101,15 +99,20 @@ def do_workload(host, daemonCfg, workload):
                     for arm in controller["bandit"]["lagrange"]["lagrangeConstraint"][
                         "weights"
                     ]:
-                        value = arm["action"][0]["actuatorValue"]
-                        ids = [a["actuatorID"] for a in arm["action"]]
-                        print(ids)
                         history[
-                            str(ids) + str(value / 1000000) + "-probability"
+                            str(arm["action"]) + "-probability"
                         ].append((t, arm["probability"]["getProbability"]))
                         history[
-                            str(ids) + str(value / 1000000) + "-cumulativeLoss"
+                            str(arm["action"]) + "-cumulativeLoss"
                         ].append((t, arm["cumulativeLoss"]["getCumulativeLoss"]))
+                    print(controller["armstats"])
+                    for arm,stats in controller["armstats"]:
+                        pulls=stats[0]
+                        avgLoss=stats[1]
+                        history[ "pulls-"+str(arm)].append((t,pulls))
+                        history[ "avgLoss-"+str(arm)].append((t,avgLoss))
+
+
             host.check_daemon()
         print("")
     except:

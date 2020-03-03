@@ -14,7 +14,7 @@ from functools import reduce
 import nrm.tooling as nrm
 import experiment
 
-experimentSamplingSize = 1
+experimentSamplingSize = 2
 # experimentSamplingSize = 3
 # powerCapRanges = [60, 70, 80, 90, 100, 110, 130, 150, 180, 210]
 powerCapRanges = [150, 80]
