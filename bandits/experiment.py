@@ -35,7 +35,11 @@ def perfwrapped(cmd, args):
     ]
 
 
-def do_workload(host, daemonCfg, workload):
+def armShorthandDescription(arm):
+    return('/'.join([str(a["actuatorValue"]) for a in arm])
+            )
+
+def do_workload(host, baseAction, daemonCfg, workload):
     host.start_daemon(daemonCfg)
     print("Starting the workload")
     host.run_workload(workload)
@@ -58,14 +62,15 @@ def do_workload(host, daemonCfg, workload):
                     print("Actuator identifier list:")
                     for sensorID in [sensor[0] for sensor in cpd["actuators"]]:
                         print("- %s" % sensorID)
-                content = msg["pubMeasurements"][1][0]
-                t = content["time"]
-                sensorID = content["sensorID"]
-                if "Downstream" in sensorID:
-                    sensorID="sensor-Downstream"
-                x = content["sensorValue"]
+                for content in msg["pubMeasurements"][1]:
+                    t = content["time"]
+                    sensorID = content["sensorID"]
+                    if "Downstream" in sensorID:
+                        sensorID="sensor-Downstream"
+                    x = content["sensorValue"]
+                    history["sensor-" + sensorID].append((t, x))
+                    host.workload_action(baseActions)
                 print(".", end="")
-                history["sensor-" + sensorID].append((t, x))
             if "pubCPD" in msg:
                 print("R")
             if "pubAction" in msg:
@@ -96,21 +101,25 @@ def do_workload(host, daemonCfg, workload):
                     actuatorID = content["actuatorID"] + "(action)"
                     x = content["actuatorValue"]
                     history[actuatorID].append((t, x))
-                    for arm in controller["bandit"]["lagrange"]["lagrangeConstraint"][
-                        "weights"
-                    ]:
-                        history[
-                            str(arm["action"]) + "-probability"
-                        ].append((t, arm["probability"]["getProbability"]))
-                        history[
-                            str(arm["action"]) + "-cumulativeLoss"
-                        ].append((t, arm["cumulativeLoss"]["getCumulativeLoss"]))
-                    print(controller["armstats"])
-                    for arm,stats in controller["armstats"]:
-                        pulls=stats[0]
-                        avgLoss=stats[1]
-                        history[ "pulls-"+str(arm)].append((t,pulls))
-                        history[ "avgLoss-"+str(arm)].append((t,avgLoss))
+                for arm in controller["bandit"]["lagrange"]["lagrangeConstraint"][
+                    "weights"
+                ]:
+                    print("old")
+                    print(arm)
+                    history[
+                        armShorthandDescription(arm["action"]) + "-probability"
+                    ].append((t, arm["probability"]["getProbability"]))
+                    history[
+                        armShorthandDescription(arm["action"]) + "-cumulativeLoss"
+                    ].append((t, arm["cumulativeLoss"]["getCumulativeLoss"]))
+                print(controller["armstats"])
+                for arm,stats in controller["armstats"]:
+                    pulls=stats[0]
+                    avgLoss=stats[1]
+                    print("new")
+                    print(arm)
+                    history[ "pulls-"+armShorthandDescription(arm)].append((t,pulls))
+                    history[ "avgLoss-"+armShorthandDescription(arm)].append((t,avgLoss))
 
 
             host.check_daemon()
@@ -121,7 +130,6 @@ def do_workload(host, daemonCfg, workload):
         return history
     host.stop_daemon()
     return history
-
 
 def history_to_dataframe(key, history):
     iteration, name = key
