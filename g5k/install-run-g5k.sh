@@ -102,6 +102,9 @@ envinstall() {
 # -- [STEP] hnrm installation --
 
 install_hnrm() {
+	# warm DNS cache to prevent git clone error
+	curl --silent --show-error --no-keepalive --retry 2 --head \
+		"${HNRM_GIT_REPOSITORY_URL}" >/dev/null
 	# check hnrm README for installation procedure
 	git clone \
 		--recurse-submodules \
