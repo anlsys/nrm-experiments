@@ -1,4 +1,4 @@
-let Cfg = ../resources/types/Cfg.dhall
+let Cfg = ../../../resources/types/Cfg.dhall
 
 let ControlCfg =
       < ControlCfg :
@@ -8,9 +8,11 @@ let ControlCfg =
               { fromuW : Double }
           , learnCfg :
               < Lagrange :
-                  { lagrangeConstraint : Double }
+                  { lagrange : Double }
               | Knapsack :
-                  { knapsackConstraint : Double }
+                  { knapsack : Double }
+              | Random :
+                  { random : Optional Integer }
               >
           , speedThreshold :
               Double
@@ -21,7 +23,7 @@ let ControlCfg =
           { fixedPower : { fromuW : Double } }
       >
 
-in      ../resources/defaults/Cfg.dhall
+in      ../../../resources/defaults/Cfg.dhall
       ⫽ { controlCfg =
             ControlCfg.ControlCfg
             { minimumControlInterval =
@@ -30,13 +32,15 @@ in      ../resources/defaults/Cfg.dhall
                 { fromuW = 2.0e8 }
             , learnCfg =
                 < Lagrange :
-                    { lagrangeConstraint : Double }
+                    { lagrange : Double }
                 | Knapsack :
-                    { knapsackConstraint : Double }
+                    { knapsack : Double }
+                | Random :
+                    { random : Optional Integer }
                 >.Lagrange
-                { lagrangeConstraint = 1.0 }
+                { lagrange = 1.0 }
             , speedThreshold =
-                0.9
+               0.9
             , referenceMeasurementRoundInterval =
                 +6
             }
