@@ -51,7 +51,7 @@
 ```{r}
   df_progress = df[which(df$variable == "sensor-sensor-Downstream"), c("name","value","iteration")]
   df_progress$value=as.numeric(as.character(df_progress$value))
-  df_progress = ddply(df_progress, .(name,iteration), summarize, instructions=sum(value))
+  df_progress = ddply(df_progress, .(name,iteration), summarize, instructions=mean(value), instructionsSd = sd(value) )
   print(df_progress)
 ```
 
@@ -73,6 +73,7 @@
   df_reference= filter(df_post, name == "pcap250/250")
   print(df_reference)
   runtime_reference = mean(df_reference$runtime)
+  throughput_reference = mean(df_reference$instructions)
   df_post$constraintBreach = df_post$runtime > (1.1 * runtime_reference)
   print(df_post)
 ```
@@ -89,8 +90,27 @@
 ```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
   ggplot(data=df_post, aes(x=name, y=runtime) ) +
     geom_boxplot() +
-    geom_hline(yintercept = 1.1 * runtime_reference, linetype="dashed", color = "red") +
-    geom_hline(yintercept = runtime_reference, linetype="dashed", color = "brown")
+    geom_hline(yintercept = runtime_reference/0.9, linetype="dashed", color = "red") +
+    geom_hline(yintercept = runtime_reference, linetype="dashed", color = "black")
+```
+
+# Average throughput by strategy
+```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+  ggplot(data=df_post, aes(x=name, y=instructions) ) +
+    geom_boxplot() +
+    geom_hline(yintercept = 0.9 * throughput_reference, linetype="dashed", color = "red") +
+    geom_hline(yintercept = throughput_reference, linetype="dashed", color = "black")
+```
+
+```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+  ggplot(data=df_post, aes(x=name, y=instructionsSd) ) +
+    geom_boxplot()
+```
+
+# Average power by strategy
+```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+  ggplot(data=df_post, aes(x=name, y=wh/runtime) ) +
+    geom_boxplot()
 ```
 
 # Sensor outputs for static high and low powercap
