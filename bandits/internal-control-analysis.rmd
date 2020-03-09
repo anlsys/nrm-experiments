@@ -39,7 +39,7 @@
   df_rapl1$value=as.numeric(as.character(df_rapl1$value))
   df_rapl = merge( df_rapl0, df_rapl1,by=c("time","iteration","name"))
   df_rapl = rename(df_rapl, rapl0 = value.x, rapl1 = value.y)
-  df_rapl$value = df_rapl$rapl0 + df_rapl$rapl1 + 200
+  df_rapl$value = df_rapl$rapl0 + df_rapl$rapl1 + pStatic
   integrateWattHours <- function(ts,vs) {
     return(tail(cumtrapz(as.numeric(ts)/3600,vs),n=1))
   }
@@ -58,8 +58,7 @@
 # Runtimes
 ```{r}
   df_runtime = df[which(grepl("sensor",df$variable) & df$variable != "actionType"), c("name","iteration","time")]
-  df_runtime = ddply(df_runtime, .(name,iteration), summarize, runtime=max(time)-min(time))
-  df_runtime$runtime = as.numeric(df_runtime$runtime, units = "secs")
+  df_runtime = ddply(df_runtime, .(name,iteration), summarize, runtime=as.numeric(max(time),units="secs"))
   print(df_runtime)
 ```
 
@@ -71,7 +70,8 @@
 
   print(df_post)
 
-  df_reference= filter(df_post, name == "pcap200/200")
+  df_reference= filter(df_post, name == "pcap250/250")
+  print(df_reference)
   runtime_reference = mean(df_reference$runtime)
   df_post$constraintBreach = df_post$runtime > (1.1 * runtime_reference)
   print(df_post)
@@ -98,7 +98,7 @@
 Package 0:
 
 ```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  ggplot(data=df[which((df$name=="pcap200/200" |df$name=="pcap70/70") & df$variable=="sensor-RaplKey (PackageID 0)" ) ,],
+  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap70/70") & df$variable=="sensor-RaplKey (PackageID 0)" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
     geom_line() +
@@ -112,7 +112,7 @@ Package 0:
 Package 1:
 
 ```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  ggplot(data=df[which((df$name=="pcap200/200" |df$name=="pcap70/70") & df$variable=="sensor-RaplKey (PackageID 1)" ) ,],
+  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap70/70") & df$variable=="sensor-RaplKey (PackageID 1)" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
     geom_line() +
@@ -125,7 +125,7 @@ Package 1:
 Downstream perf monitoring:
 
 ```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  ggplot(data=df[which((df$name=="pcap200/200" |df$name=="pcap70/70") & df$variable=="sensor-sensor-Downstream" ) ,],
+  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap70/70") & df$variable=="sensor-sensor-Downstream" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
     geom_line() +
@@ -239,6 +239,28 @@ Downstream perf monitoring:
 ## Average observed arm losses.
 ```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
   ggplot(df_control[which(grepl("avgLoss",df_control$"variable")),],
+         aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
+    geom_line() +
+    scale_x_datetime()+
+    theme(strip.text.y = element_text(angle = 0))+
+    facet_grid(rows = vars(iteration))
+```
+
+## Average observed constraints.
+```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+  ggplot(df_control[which(grepl("avgCst",df_control$"variable")),],
+         aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
+    geom_point() +
+    geom_line() +
+    scale_x_datetime()+
+    geom_hline(yintercept = 0.9, linetype="dashed", color = "red") +
+    theme(strip.text.y = element_text(angle = 0))+
+    facet_grid(rows = vars(iteration))
+```
+
+## Average observed objs
+```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+  ggplot(df_control[which(grepl("avgObj",df_control$"variable")),],
          aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
     geom_line() +
     scale_x_datetime()+

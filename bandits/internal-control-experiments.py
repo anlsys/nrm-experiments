@@ -1,54 +1,69 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import json
-import time
-from collections import defaultdict
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
-import scipy.integrate as integrate
-from functools import reduce
-
+import random
 import nrm.tooling as nrm
 import experiment
 
 # experimentSamplingSize = 1
-experimentSamplingRange = range(1, 2)
-powerCapRanges = [
-        [
-            nrm.Action("RaplKey (PackageID 0)", p0),
-            nrm.Action("RaplKey (PackageID 1)", p1)
-            ]
-        for p0,p1 in [(70,70),(210,70),(70,210),(210,210)]
-        ]
+experimentSamplingRange = range(0, 4)
+powerCapRanges = [70, 250]
+actionLists = [
+    [nrm.Action("RaplKey (PackageID 0)", p0), nrm.Action("RaplKey (PackageID 1)", p1)]
+    for p0, p1 in [(250, 250), (250, 70), (70, 250), (70, 70)]
+]
 # powerCapRanges = [150, 80]
 staticPower = 200000000
 referenceMeasurementRoundInterval = 10
 
+raplCfg = {
+    "raplActions": [{"fromuW": 1000000 * p} for p in powerCapRanges],
+    "raplFrequency": {"fromHz": 1},
+    "raplPath": "/sys/devices/virtual/powercap/intel-rapl",
+}
+
 daemonCfgs = {}
 
 for i in experimentSamplingRange:
-    for caps in powerCapRanges,:
-        daemonCfgs[(i, "pcap" + str(caps))] = (caps,{
-            "controlCfg": {"fixedPower": {"fromuW": 1000000}}
-        })
-    daemonCfgs[(i, "controlOn")] = (None,{
-        "controlCfg": {
-            "staticPower": {"fromuW": staticPower},
-            "referenceMeasurementRoundInterval": referenceMeasurementRoundInterval,
-            "learnCfg": {"lagrangeConstraint": 1},
-            "speedThreshold": 1.1,
-            "minimumControlInterval": {"fromuS": 1000000},
+    for actions in actionLists:
+        daemonCfgs[(i, "pcap" + experiment.ActionsShorthandDescription(actions))] = (
+            actions,
+            {
+                "controlCfg": {"fixedPower": {"fromuW": 1000000}},
+                "raplCfg": raplCfg,
+                "verbose": "Info",
+            },
+        )
+    daemonCfgs[(i, "controlOn")] = (
+        None,
+        {
+            "controlCfg": {
+                "staticPower": {"fromuW": staticPower},
+                "referenceMeasurementRoundInterval": referenceMeasurementRoundInterval,
+                "learnCfg": {"lagrange": 1},
+                "speedThreshold": 0.9,
+                "minimumControlInterval": {"fromuS": 5000000},
+            },
+            "raplCfg": raplCfg,
+            "verbose": "Info",
         },
-        "raplCfg": {
-            "raplActions": [{"fromuW": 1000000 * p} for p in powerCapRanges],
-            "raplFrequency": {"fromHz": 1},
-            "raplPath": "/sys/devices/virtual/powercap/intel-rapl",
+    )
+    daemonCfgs[(i, "randomUniform")] = (
+        None,
+        {
+            "controlCfg": {
+                "staticPower": {"fromuW": staticPower},
+                "referenceMeasurementRoundInterval": referenceMeasurementRoundInterval,
+                "learnCfg": {"random": None},
+                "speedThreshold": 0.9,
+                "minimumControlInterval": {"fromuS": 5000000},
+            },
+            "raplCfg": raplCfg,
+            "verbose": "Info",
         },
-        "verbose" : "Info"
-    })
+    )
+
 
 stream = experiment.perfwrapped("stream_c", [])
 
@@ -60,9 +75,15 @@ lammps = experiment.perfwrapped(
 
 host = nrm.Local()
 results = {}
-for key, expe in daemonCfgs.items():
-    baseAction, cfg = expe
-    results[key] = experiment.do_workload(host, baseAction, cfg, stream)
+
+keys = list(daemonCfgs.keys())
+print(keys)
+random.shuffle(keys)
+print(keys)
+
+for key in keys:
+    baseActions, cfg = daemonCfgs[key]
+    results[key] = experiment.do_workload(host, baseActions, cfg, stream)
 
 import pickle
 

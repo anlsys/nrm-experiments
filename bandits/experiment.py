@@ -36,100 +36,98 @@ def perfwrapped(cmd, args):
 
 
 def armShorthandDescription(arm):
-    return('/'.join([str(a["actuatorValue"]) for a in arm])
-            )
+    return "/".join([str(a["actuatorValue"]) for a in arm])
 
-def do_workload(host, baseAction, daemonCfg, workload):
+
+def ActionsShorthandDescription(arm):
+    return "/".join([str(a.actuatorValue) for a in arm])
+
+
+def do_workload(host, baseActions, daemonCfg, workload):
     host.start_daemon(daemonCfg)
     print("Starting the workload")
     host.run_workload(workload)
     history = defaultdict(list)
     getCPD = True
-    try:
-        while host.check_daemon() and not host.workload_finished():
-            measurement_message = host.workload_recv()
-            msg = json.loads(measurement_message)
-            if "pubMeasurements" in msg:
-                if getCPD:
-                    getCPD = False
-                    time.sleep(3)
-                    cpd = host.get_cpd()
-                    print(cpd)
-                    cpd = dict(cpd)
-                    print("Sensor identifier list:")
-                    for sensorID in [sensor[0] for sensor in cpd["sensors"]]:
-                        print("- %s" % sensorID)
-                    print("Actuator identifier list:")
-                    for sensorID in [sensor[0] for sensor in cpd["actuators"]]:
-                        print("- %s" % sensorID)
-                for content in msg["pubMeasurements"][1]:
-                    t = content["time"]
-                    sensorID = content["sensorID"]
-                    if "Downstream" in sensorID:
-                        sensorID="sensor-Downstream"
-                    x = content["sensorValue"]
-                    history["sensor-" + sensorID].append((t, x))
+    while host.check_daemon() and not host.workload_finished():
+        measurement_message = host.workload_recv()
+        msg = json.loads(measurement_message)
+        if "pubMeasurements" in msg:
+            if getCPD:
+                getCPD = False
+                time.sleep(3)
+                cpd = host.get_cpd()
+                print(cpd)
+                cpd = dict(cpd)
+                print("Sensor identifier list:")
+                for sensorID in [sensor[0] for sensor in cpd["sensors"]]:
+                    print("- %s" % sensorID)
+                print("Actuator identifier list:")
+                for sensorID in [sensor[0] for sensor in cpd["actuators"]]:
+                    print("- %s" % sensorID)
+                if baseActions:
                     host.workload_action(baseActions)
-                print(".", end="")
-            if "pubCPD" in msg:
-                print("R")
-            if "pubAction" in msg:
-                t, contents, meta, controller = msg["pubAction"]
-                if "bandit" in controller.keys():
-                    for key in meta.keys():
-                        history["actionType"].append((t, key))
-                    if "referenceMeasurementDecision" in meta.keys():
-                        print("(ref)", end="")
-                    elif "initialDecision" in meta.keys():
-                        print("(init)", end="")
-                    elif "innerDecision" in meta.keys():
-                        print("(inner)", end="")
-                        counter = 0
-                        for value in meta["innerDecision"]["constraints"]:
-                            history["constraint-" + str(counter)].append(
-                                (t, value["fromConstraintValue"])
-                            )
-                            counter = counter + 1
-                        counter = 0
-                        for value in meta["innerDecision"]["objectives"]:
-                            history["objective-" + str(counter)].append(
-                                (t, value["fromObjectiveValue"])
-                            )
-                            counter = counter + 1
-                        history["loss"].append((t, meta["innerDecision"]["loss"]))
-                for content in contents:
-                    actuatorID = content["actuatorID"] + "(action)"
-                    x = content["actuatorValue"]
-                    history[actuatorID].append((t, x))
-                for arm in controller["bandit"]["lagrange"]["lagrangeConstraint"][
-                    "weights"
-                ]:
-                    print("old")
-                    print(arm)
+            for content in msg["pubMeasurements"][1]:
+                t = content["time"]
+                sensorID = content["sensorID"]
+                if "Downstream" in sensorID:
+                    sensorID = "sensor-Downstream"
+                x = content["sensorValue"]
+                history["sensor-" + sensorID].append((t, x))
+            print(".", end="")
+        if "pubCPD" in msg:
+            print("R")
+        if "pubAction" in msg:
+            t, contents, meta, controller = msg["pubAction"]
+            if "bandit" in controller.keys():
+                for key in meta.keys():
+                    history["actionType"].append((t, key))
+                if "referenceMeasurementDecision" in meta.keys():
+                    print("(ref)", end="")
+                elif "initialDecision" in meta.keys():
+                    print("(init)", end="")
+                elif "innerDecision" in meta.keys():
+                    print("(inner)", end="")
+                    counter = 0
+                    for value in meta["innerDecision"]["constraints"]:
+                        history["constraint-" + str(counter)].append(
+                            (t, value["fromConstraintValue"])
+                        )
+                        counter = counter + 1
+                    counter = 0
+                    for value in meta["innerDecision"]["objectives"]:
+                        history["objective-" + str(counter)].append(
+                            (t, value["fromObjectiveValue"])
+                        )
+                        counter = counter + 1
+                    history["loss"].append((t, meta["innerDecision"]["loss"]))
+            for content in contents:
+                actuatorID = content["actuatorID"] + "(action)"
+                x = content["actuatorValue"]
+                history[actuatorID].append((t, x))
+            bandit = controller["bandit"]
+            if "lagrange" in bandit.keys():
+                for arm in bandit["lagrange"]["lagrange"]["weights"]:
                     history[
                         armShorthandDescription(arm["action"]) + "-probability"
                     ].append((t, arm["probability"]["getProbability"]))
                     history[
                         armShorthandDescription(arm["action"]) + "-cumulativeLoss"
                     ].append((t, arm["cumulativeLoss"]["getCumulativeLoss"]))
-                print(controller["armstats"])
-                for arm,stats in controller["armstats"]:
-                    pulls=stats[0]
-                    avgLoss=stats[1]
-                    print("new")
-                    print(arm)
-                    history[ "pulls-"+armShorthandDescription(arm)].append((t,pulls))
-                    history[ "avgLoss-"+armShorthandDescription(arm)].append((t,avgLoss))
-
-
-            host.check_daemon()
-        print("")
-    except:
-        e = sys.exc_info()[0]
-        print(e)
-        return history
+            for arm, stats in controller["armstats"]:
+                pulls = stats[0]
+                avgLoss = stats[1]
+                avgObj = stats[2][0]
+                avgCst = stats[3][0]
+                history["pulls-" + armShorthandDescription(arm)].append((t, pulls))
+                history["avgLoss-" + armShorthandDescription(arm)].append((t, avgLoss))
+                history["avgObj-" + armShorthandDescription(arm)].append((t, avgObj))
+                history["avgCst-" + armShorthandDescription(arm)].append((t, avgCst))
+        host.check_daemon()
+    print("")
     host.stop_daemon()
     return history
+
 
 def history_to_dataframe(key, history):
     iteration, name = key
