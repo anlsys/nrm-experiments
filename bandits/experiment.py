@@ -115,10 +115,19 @@ def do_workload(host, baseActions, daemonCfg, workload):
                         armShorthandDescription(arm["action"]) + "-cumulativeLoss"
                     ].append((t, arm["cumulativeLoss"]["getCumulativeLoss"]))
             for arm, stats in controller["armstats"]:
+                print(stats)
                 pulls = stats[0]
                 avgLoss = stats[1]
                 avgObj = stats[2][0]
                 avgCst = stats[3][0]
+                for name, value in stats[4]:
+                    history["avgMeasurement-" + armShorthandDescription(arm)].append(
+                        (t, value)
+                    )
+                for name, value in stats[5]:
+                    history["avgRef-" + armShorthandDescription(arm)].append(
+                        (t, value)
+                    )
                 history["pulls-" + armShorthandDescription(arm)].append((t, pulls))
                 history["avgLoss-" + armShorthandDescription(arm)].append((t, avgLoss))
                 history["avgObj-" + armShorthandDescription(arm)].append((t, avgObj))

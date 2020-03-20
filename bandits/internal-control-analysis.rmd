@@ -33,7 +33,7 @@
 
 # Total energy expenditure
 ```{r}
-  df_rapl0 = df[which(df$variable == "sensor-RaplKey (PackageID 1)"), c("name","value","iteration","time")]
+  df_rapl0 = df[which(df$variable == "sensor-RaplKey (PackageID 0)"), c("name","value","iteration","time")]
   df_rapl0$value=as.numeric(as.character(df_rapl0$value))
   df_rapl1 = df[which(df$variable == "sensor-RaplKey (PackageID 1)"), c("name","value","iteration","time")]
   df_rapl1$value=as.numeric(as.character(df_rapl1$value))
@@ -118,7 +118,7 @@
 Package 0:
 
 ```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap70/70") & df$variable=="sensor-RaplKey (PackageID 0)" ) ,],
+  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap70/70"|df$name=="pcap70/250"|df$name=="pcap250/70") & df$variable=="sensor-RaplKey (PackageID 0)" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
     geom_line() +
@@ -132,7 +132,7 @@ Package 0:
 Package 1:
 
 ```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap70/70") & df$variable=="sensor-RaplKey (PackageID 1)" ) ,],
+  ggplot(data=df[which((df$name=="pcap250/250" | df$name=="pcap70/70"|df$name=="pcap70/250" | df$name=="pcap250/70") & df$variable=="sensor-RaplKey (PackageID 1)" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
     geom_line() +
@@ -235,7 +235,7 @@ Downstream perf monitoring:
 ```
 
 ## Internal bandit parameters
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+```
   ggplot(df_control[which(grepl("proba",df_control$"variable")),],
          aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
     geom_line() +
@@ -245,7 +245,7 @@ Downstream perf monitoring:
     ylab("pull probabilities")
 ```
 
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+```
   ggplot(df_control[which(grepl("cumulativeLoss",df_control$"variable")),],
          aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
     geom_line() +
@@ -257,7 +257,7 @@ Downstream perf monitoring:
 ```
 
 ## Average observed arm losses.
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=12}
   ggplot(df_control[which(grepl("avgLoss",df_control$"variable")),],
          aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
     geom_line() +
@@ -267,19 +267,18 @@ Downstream perf monitoring:
 ```
 
 ## Average observed constraints.
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=12}
   ggplot(df_control[which(grepl("avgCst",df_control$"variable")),],
          aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
-    geom_point() +
     geom_line() +
     scale_x_datetime()+
-    geom_hline(yintercept = 0.9, linetype="dashed", color = "red") +
+    geom_hline(yintercept = 1/0.9, linetype="dashed", color = "red") +
     theme(strip.text.y = element_text(angle = 0))+
     facet_grid(rows = vars(iteration))
 ```
 
 ## Average observed objs
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=12}
   ggplot(df_control[which(grepl("avgObj",df_control$"variable")),],
          aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
     geom_line() +
