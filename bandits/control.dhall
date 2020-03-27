@@ -1,5 +1,22 @@
 let Cfg = ../../../resources/types/Cfg.dhall
 
+let Hint =
+      < Full
+      | Only :
+          { only : List (List { actuatorID : Text, actuatorValue : Double }) }
+      >
+
+let LearnCfg =
+      < Lagrange :
+          { lagrange : Double }
+      | Knapsack :
+          { knapsack : Double }
+      | Random :
+          { random : Optional Integer }
+      | Contextual :
+          { contextual : { horizon : Integer } }
+      >
+
 let ControlCfg =
       < ControlCfg :
           { minimumControlInterval :
@@ -7,17 +24,13 @@ let ControlCfg =
           , staticPower :
               { fromuW : Double }
           , learnCfg :
-              < Lagrange :
-                  { lagrange : Double }
-              | Knapsack :
-                  { knapsack : Double }
-              | Random :
-                  { random : Optional Integer }
-              >
+              LearnCfg
           , speedThreshold :
               Double
           , referenceMeasurementRoundInterval :
               Integer
+          , hint :
+              Hint
           }
       | FixedCommand :
           { fixedPower : { fromuW : Double } }
@@ -31,18 +44,14 @@ in      ../../../resources/defaults/Cfg.dhall
             , staticPower =
                 { fromuW = 2.0e8 }
             , learnCfg =
-                < Lagrange :
-                    { lagrange : Double }
-                | Knapsack :
-                    { knapsack : Double }
-                | Random :
-                    { random : Optional Integer }
-                >.Lagrange
-                { lagrange = 1.0 }
+                LearnCfg.Contextual { contextual = { horizon = +111 } }
             , speedThreshold =
-               0.9
+                0.9
             , referenceMeasurementRoundInterval =
                 +6
+            , hint =
+                Hint.Only
+                { only = [ [ { actuatorID = "toto", actuatorValue = 66.0 } ] ] }
             }
         , verbose =
             < Error | Info | Debug >.Info

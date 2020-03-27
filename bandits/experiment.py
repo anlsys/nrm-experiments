@@ -101,31 +101,34 @@ def do_workload(host, baseActions, daemonCfg, workload):
                         )
                         counter = counter + 1
                     history["loss"].append((t, meta["innerDecision"]["loss"]))
+                bandit = controller["bandit"]
+                if "lagrange" in bandit.keys():
+                    for arm in bandit["lagrange"]["lagrange"]["weights"]:
+                        history[
+                            armShorthandDescription(arm["action"]) + "-probability"
+                        ].append((t, arm["probability"]["getProbability"]))
+                        history[
+                            armShorthandDescription(arm["action"]) + "-cumulativeLoss"
+                        ].append((t, arm["cumulativeLoss"]["getCumulativeLoss"]))
             for content in contents:
                 actuatorID = content["actuatorID"] + "(action)"
                 x = content["actuatorValue"]
                 history[actuatorID].append((t, x))
-            bandit = controller["bandit"]
-            if "lagrange" in bandit.keys():
-                for arm in bandit["lagrange"]["lagrange"]["weights"]:
-                    history[
-                        armShorthandDescription(arm["action"]) + "-probability"
-                    ].append((t, arm["probability"]["getProbability"]))
-                    history[
-                        armShorthandDescription(arm["action"]) + "-cumulativeLoss"
-                    ].append((t, arm["cumulativeLoss"]["getCumulativeLoss"]))
             for arm, stats in controller["armstats"]:
-                print(stats)
                 pulls = stats[0]
                 avgLoss = stats[1]
                 avgObj = stats[2][0]
                 avgCst = stats[3][0]
                 for name, value in stats[4]:
-                    history["avgMeasurement-" + armShorthandDescription(arm)].append(
+                    if "Downstream" in name:
+                        name = "Downstream"
+                    history["avgMeasurement-" + name + "-" + armShorthandDescription(arm)].append(
                         (t, value)
                     )
                 for name, value in stats[5]:
-                    history["avgRef-" + armShorthandDescription(arm)].append(
+                    if "Downstream" in name:
+                        name = "Downstream"
+                    history["avgRef-" + name + "-" + armShorthandDescription(arm)].append(
                         (t, value)
                     )
                 history["pulls-" + armShorthandDescription(arm)].append((t, pulls))
