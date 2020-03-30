@@ -6,7 +6,7 @@ import random
 import nrm.tooling as nrm
 import experiment
 
-experimentSamplingRange = range(0, 2)
+experimentSamplingRange = range(0, 1)
 # experimentSamplingRange = range(0, 6)
 powerCapRanges = [70, 250]
 admissible = [(250, 250), (70, 70)]
@@ -17,7 +17,7 @@ actionLists = [
 
 hintActionList = [
     [{"actuatorID": "RaplKey (PackageID 0)", "actuatorValue": p0}
-    , {"actuatorID": "RaplKey (PackageID 1)", "actuatorValue": p1}] 
+    , {"actuatorID": "RaplKey (PackageID 1)", "actuatorValue": p1}]
     for (p0, p1) in admissible
 ]
 
@@ -33,15 +33,15 @@ raplCfg = {
 daemonCfgs = {}
 
 for i in experimentSamplingRange:
-    for actions in actionLists:
-        daemonCfgs[(i, "pcap" + experiment.ActionsShorthandDescription(actions))] = (
-            actions,
-            {
-                "controlCfg": {"fixedPower": {"fromuW": 1000000}},
-                "raplCfg": raplCfg,
-                "verbose": "Info",
-            },
-        )
+    # for actions in actionLists:
+        # daemonCfgs[(i, "pcap" + experiment.ActionsShorthandDescription(actions))] = (
+            # actions,
+            # {
+                # "controlCfg": {"fixedPower": {"fromuW": 1000000}},
+                # "raplCfg": raplCfg,
+                # "verbose": "Info",
+            # },
+        # )
     daemonCfgs[(i, "controlOn")] = (
         None,
         {
@@ -57,20 +57,20 @@ for i in experimentSamplingRange:
             "verbose": "Info",
         },
     )
-    daemonCfgs[(i, "randomUniform")] = (
-        None,
-        {
-            "controlCfg": {
-                "staticPower": {"fromuW": staticPower},
-                "referenceMeasurementRoundInterval": referenceMeasurementRoundInterval,
-                "learnCfg": {"random": None},
-                "speedThreshold": 1.11,
-                "minimumControlInterval": {"fromuS": 3000000},
-            },
-            "raplCfg": raplCfg,
-            "verbose": "Info",
-        },
-    )
+    # daemonCfgs[(i, "randomUniform")] = (
+        # None,
+        # {
+            # "controlCfg": {
+                # "staticPower": {"fromuW": staticPower},
+                # "referenceMeasurementRoundInterval": referenceMeasurementRoundInterval,
+                # "learnCfg": {"random": None},
+                # "speedThreshold": 1.11,
+                # "minimumControlInterval": {"fromuS": 3000000},
+            # },
+            # "raplCfg": raplCfg,
+            # "verbose": "Info",
+        # },
+    # )
 
 
 stream = experiment.perfwrapped("stream_c", [])

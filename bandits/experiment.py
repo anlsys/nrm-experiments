@@ -100,6 +100,13 @@ def do_workload(host, baseActions, daemonCfg, workload):
                             (t, value["fromObjectiveValue"])
                         )
                         counter = counter + 1
+                    counter = 0
+                    for value in meta["innerDecision"]["reportEvaluatedObjectives"]:
+                        print(value)
+                        history["reportEvaluatedObjectives(weight)-" + str(counter)].append((t, value[0]))
+                        history["reportEvaluatedObjectives(measurement)-" + str(counter)].append((t, value[1]))
+                        history["reportEvaluatedObjectives(ranges)-" + str(counter)].append((t, value[2]))
+                        counter = counter + 1
                     history["loss"].append((t, meta["innerDecision"]["loss"]))
                 bandit = controller["bandit"]
                 if "lagrange" in bandit.keys():
