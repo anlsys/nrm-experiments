@@ -15,93 +15,98 @@ As :command:`hnrm` relies on RAPL, care needs to be taken when choosing the
 Grid'5000 cluster.
 
 
-Base image deployment
----------------------
+Image deployment
+----------------
 
-From the shell of the chosen site frontend (here Luxembourg):
+From the shell of the chosen site fronted (here Grenoble):
 
 .. code-block:: console
 
-   $ cluster=petitprince
-   $ oarsub -I -l nodes=1,walltime=3:00 -p "cluster='${cluster}'" -t deploy
+   $ cluster=dahu
+   $ walltime=1:00
+   $
+   $ oarsub -I -l "nodes=1,walltime=${walltime}" -p "cluster='${cluster}'" -t deploy
    [ADMISSION RULE] Modify resource description with type constraints
-   [ADMISSION_RULE] Resources properties : \{'resources' => [{'resource' => 'host','value' => '1'}],'property' => 'type = \'default\''}
-   [ADMISSION RULE] Job properties : ((cluster='petitprince') AND deploy = 'YES') AND maintenance = 'NO'
+   [ADMISSION_RULE] Resources properties : \{'property' => 'type = \'default\'','resources' => [{'resource' => 'host','value' => '1'}]}
+   [ADMISSION RULE] Job properties : ((cluster='dahu') AND deploy = 'YES') AND maintenance = 'NO'
    Generate a job key...
-   OAR_JOB_ID=198385
+   OAR_JOB_ID=1923747
    Interactive mode: waiting...
    Starting...
-   Connect to OAR job 198385 via the node frontend
-   $ kadeploy3 -f ${OAR_NODE_FILE} -e debian10-x64-min -k
-   Deployment #D-e2f6675e-327e-49dd-9eb2-3527edda9de3 started
+   Connect to OAR job 1923747 via the node frontend
+   $
+   $ kadeploy3 -f ${OAR_NODE_FILE} -u rbleuse -e debian10-x64-hnrm -k
+   Deployment #D-081b9bd2-9b1f-4c53-a355-fdeb7c2b1fde started
    Grab the key file /home/rbleuse/.ssh/authorized_keys
-   Launching a deployment on petitprince-14.luxembourg.grid5000.fr
+   Launching a deployment on dahu-32.grenoble.grid5000.fr
    Performing a Deploy[SetDeploymentEnvUntrusted] step
      switch_pxe
      reboot
-      * Performing a soft reboot on petitprince-14.luxembourg.grid5000.fr
+      * Performing a soft reboot on dahu-32.grenoble.grid5000.fr
      wait_reboot
      send_key_in_deploy_env
      create_partition_table
      format_deploy_part
      mount_deploy_part
      format_swap_part
-   End of step Deploy[SetDeploymentEnvUntrusted] after 202s
+   End of step Deploy[SetDeploymentEnvUntrusted] after 205s
    Performing a Deploy[BroadcastEnvKascade] step
      send_environment
-      * Broadcast time: 10s
+      * Broadcast time: 78s
      manage_admin_post_install
      manage_user_post_install
      check_kernel_files
      send_key
      install_bootloader
      sync
-   End of step Deploy[BroadcastEnvKascade] after 37s
+   End of step Deploy[BroadcastEnvKascade] after 97s
    Performing a Deploy[BootNewEnvKexec] step
      switch_pxe
      umount_deploy_part
      mount_deploy_part
      kexec
      wait_reboot
-   End of step Deploy[BootNewEnvKexec] after 29s
-   End of deployment for petitprince-14.luxembourg.grid5000.fr after 268s
-   End of deployment on cluster petitprince after 269s
-   Deployment #D-e2f6675e-327e-49dd-9eb2-3527edda9de3 done
+   End of step Deploy[BootNewEnvKexec] after 30s
+   End of deployment for dahu-32.grenoble.grid5000.fr after 332s
+   End of deployment on cluster dahu after 333s
+   Deployment #D-081b9bd2-9b1f-4c53-a355-fdeb7c2b1fde done
    
    The deployment is successful on nodes
-   petitprince-14.luxembourg.grid5000.fr
-
+   dahu-32.grenoble.grid5000.fr
 
 It takes about 5—10 minutes to deploy the image on the node.
 
 
-Installation & Start of Jupyter notebook
-----------------------------------------
+Launching Jupyter notebook
+--------------------------
 
-Copy the script :file:`install-run-g5k.sh` to :file:`/opt` on the deployed node
-(on the example run above, it is `petitprince-14.luxembourg.grid5000.fr`).
+All required software is installed on the deployed image.
+From the frontend, the notebook can be launched with the following command:
 
-Execute as root the script, it takes about 10—30 minutes to install.
+.. note::
+   The image was in this example deployed on `dahu-32`, adapt the command as
+   required.
 
 .. code-block:: console
 
-   # /opt/install-run-g5k.sh
-   …
-   [I 11:03:51.641 NotebookApp] Writing notebook server cookie secret to /home/exp-runner/.local/share/jupyter/runtime/notebook_cookie_secret
-   [I 11:03:53.463 NotebookApp] Serving notebooks from local directory: /opt/hnrm
-   [I 11:03:53.463 NotebookApp] The Jupyter Notebook is running at:
-   [I 11:03:53.463 NotebookApp] http://(petitprince-14.luxembourg.grid5000.fr or 127.0.0.1):8888/?token=6bfa61e58c1c1347bdba53c063eece33d625e36d4d3bc3ad
-   [I 11:03:53.463 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
-   [C 11:03:53.469 NotebookApp] 
-       
+   $ ssh root@dahu-32 -- runuser -u nix -- bash -l <<EOF
+   > cd /opt/hnrm-master
+   > nix-shell --run 'jupyter-notebook --no-browser --ip="0.0.0.0"'
+   > EOF
+   [I 10:36:36.778 NotebookApp] Serving notebooks from local directory: /opt/hnrm-master
+   [I 10:36:36.778 NotebookApp] The Jupyter Notebook is running at:
+   [I 10:36:36.778 NotebookApp] http://(dahu-32.grenoble.grid5000.fr or 127.0.0.1):8888/?token=47e1454cf0b3905d4870676209a008d9192235ff6fdb6a1a
+   [I 10:36:36.778 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+   [C 10:36:36.780 NotebookApp]
+   
        To access the notebook, open this file in a browser:
-           file:///home/exp-runner/.local/share/jupyter/runtime/nbserver-19745-open.html
+           file:///run/user/0/jupyter/nbserver-23248-open.html
        Or copy and paste one of these URLs:
-           http://(petitprince-14.luxembourg.grid5000.fr or 127.0.0.1):8888/?token=6bfa61e58c1c1347bdba53c063eece33d625e36d4d3bc3ad
-
+           http://(dahu-32.grenoble.grid5000.fr or 127.0.0.1):8888/?token=47e1454cf0b3905d4870676209a008d9192235ff6fdb6a1a
 
 Once started, the Jupyter notebook displays the URL to use to access it (along
 with a token).
+
 
 Connection to the Jupyter notebook
 ----------------------------------
@@ -119,11 +124,11 @@ With the example above:
 
 .. code-block:: console
 
-   $ ssh lux.g5k -N -L 8888:petitprince-14:8888
+   $ ssh gre.g5k -N -L 8888:dahu-32:8888
 
 
-Modify the URL given by Jupyter by replacing the domain/port with localhost and
-the chosen local port.
+Modify the URL given by Jupyter by replacing the domain/port with `localhost`
+and the chosen local port.
 Access this modified URL from the local web browser.
 
 

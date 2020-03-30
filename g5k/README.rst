@@ -4,15 +4,22 @@
 
 This directory contains material for experiments on the |g5k| infrastructure.
 
+Experiments environment
+-----------------------
+
+Refer to :file:`README.build.rst` for details on how to setup the experiments
+environment.
+
+
 Deployment
 ----------
 
-As of today, we rely on the minimal Debian Buster (10) image supplied by the
-technical team.
+A custom image based on the minimal Debian Buster (10) image supplied by the
+technical team is available on the Grenoble site of Grid'5000.
+
 Refer to :file:`README.deploy.rst` for details on how to deploy and run the
 Jupyter notebooks.
 
-A dedicated environment will eventually be created.
 
 Organization
 ------------

@@ -1,0 +1,26 @@
+#==============================================================================
+#
+# DESCRIPTION: HNRM above Debian buster (10) x64 min Grid'5000 environment
+#
+#==============================================================================
+---
+extend: grid5000/from_kadeploy_environment/debian10-x64-custom.yaml
+
+global:
+  nix_version: 2.3.3
+  nix_variant: x86_64-linux
+  hnrm_version: master
+  install_dir: /opt
+  image_size: 20G
+  qemu_memory_size: 8G
+
+bootstrap:
+  - "@base"
+
+setup:
+  - "@base"
+  - nix_single-user
+  - hnrm
+
+export:
+  - "@base"
