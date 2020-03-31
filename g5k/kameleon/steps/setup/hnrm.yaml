@@ -1,0 +1,38 @@
+# - hnrm:
+#   - hnrm_version: master
+
+- hnrm_repository: https://xgitlab.cels.anl.gov/argo/hnrm.git
+- hnrm_home: $${install_dir}/hnrm-$${hnrm_version}
+- hnrm_nrmd_capabilities: CAP_DAC_OVERRIDE  # comma separated (no space) of capabilities: see capabilities(7)
+
+#------------------------------------------------------------------------------
+
+- install dependencies:
+  - exec_in: apt-get update --yes
+  - exec_in: apt-get install --yes --no-install-recommends git
+
+- install_hnrm:
+  - exec_in: mkdir -p $${hnrm_home}
+  - exec_in: chown nix:nix $${hnrm_home}
+  - exec_in: |
+      runuser -u nix -- bash -l <<EOF
+      git clone --recurse-submodules --branch="$${hnrm_version}" -- "$${hnrm_repository}" "$${hnrm_home}"
+      EOF
+  - exec_in: |  # trigger Nix build
+      runuser -u nix -- bash -l <<EOF
+      cd "$${hnrm_home}"
+      nix-shell --run exit
+      EOF
+  - exec_in: |  # reduce Nix store size
+      runuser -u nix -- bash -l <<EOF
+      cd "$${hnrm_home}"
+      nix-store --optimise
+      EOF
+  - exec_in: |  # patch python interpreter capabilities
+      pythoninterpreter="$(runuser -u nix -- bash -l <<'EOF'
+      cd "$${hnrm_home}"
+      nix-shell --run 'realpath "$(command -v python)"' 2>/dev/null
+      EOF
+      )"
+      chown root:root "${pythoninterpreter}"
+      setcap $${hnrm_nrmd_capabilities}+eip "${pythoninterpreter}"

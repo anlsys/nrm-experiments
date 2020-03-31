@@ -1,0 +1,41 @@
+# - nix_single-user:
+#   - nix_version: 2.3.3
+#   - nix_variant: x86_64-linux
+
+- nix_distrib: $${nix_version}-$${nix_variant}
+- nix_location: https://nixos.org/releases/nix/nix-$${nix_version}
+- nix_maxjobs: 6
+- nix_uid: 500
+- nix_gid: 500
+- nix_home: $${install_dir}/nix-$${nix_distrib}
+
+#------------------------------------------------------------------------------
+
+- install_dependencies:
+  - exec_in: apt-get update --yes
+  - exec_in: apt-get install --yes --no-install-recommends curl sudo
+
+- retrieve_nix:
+  - download_file_in:
+    - $${nix_location}/nix-$${nix_distrib}.tar.xz
+    - $${nix_home}.tar.xz
+  - exec_in: tar -xf $${nix_home}.tar.xz -C $${install_dir}
+  - exec_in: rm $${nix_home}.tar.xz
+
+- create_nix_user:
+  - exec_in: groupadd --system --gid $${nix_gid} nix
+  - exec_in: useradd --system --uid $${nix_uid} --gid $${nix_gid} --home-dir $${nix_home} nix
+  - exec_in: chown -R nix:nix $${nix_home}
+  - exec_in: |  # allow use of sudo without password for nix user
+      cat > /etc/sudoers.d/nix-nopasswd <<EOF
+      nix ALL=(ALL:ALL) NOPASSWD: ALL
+      EOF
+  - exec_in: chmod 0440 /etc/sudoers.d/nix-nopasswd
+  - rescue:
+    - exec_in: visudo --check --strict
+    - breakpoint: "error setting sudo nopasswd policy for nix user"
+
+- install_nix:
+  - exec_in: |  # create .profile to let Nix configure sourcing nix.sh
+      runuser -u nix -- touch $${nix_home}/.profile
+  - exec_in: runuser -u nix -- sh $${nix_home}/install --no-daemon
