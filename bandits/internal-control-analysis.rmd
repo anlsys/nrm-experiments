@@ -1,6 +1,6 @@
 # Analysis
 
-```{r, echo=FALSE,  warning=FALSE}
+```{r, cache=TRUE, echo=FALSE,  warning=FALSE}
   library(ggplot2)
   theme_set(theme_minimal())
 
@@ -80,14 +80,14 @@
 
 
 # Average total watt-hour energy expenditure by strategy
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
   ggplot(data=df_post, aes(x=name, y=wh) ) +
     geom_boxplot()
 
 ```
 
 # Average runtime by  strategy
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
   ggplot(data=df_post, aes(x=name, y=runtime) ) +
     geom_boxplot() +
     geom_hline(yintercept = runtime_reference/0.9, linetype="dashed", color = "red") +
@@ -95,20 +95,20 @@
 ```
 
 # Average throughput by strategy
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
   ggplot(data=df_post, aes(x=name, y=instructions) ) +
     geom_boxplot() +
     geom_hline(yintercept = 0.9 * throughput_reference, linetype="dashed", color = "red") +
     geom_hline(yintercept = throughput_reference, linetype="dashed", color = "black")
 ```
 
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
   ggplot(data=df_post, aes(x=name, y=instructionsSd) ) +
     geom_boxplot()
 ```
 
 # Average power by strategy
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
   ggplot(data=df_post, aes(x=name, y=wh/runtime) ) +
     geom_boxplot()
 ```
@@ -117,7 +117,7 @@
 
 Package 0:
 
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
   ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap70/70"|df$name=="pcap70/250"|df$name=="pcap250/70") & df$variable=="sensor-RaplKey (PackageID 0)" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
@@ -131,7 +131,7 @@ Package 0:
 
 Package 1:
 
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
   ggplot(data=df[which((df$name=="pcap250/250" | df$name=="pcap70/70"|df$name=="pcap70/250" | df$name=="pcap250/70") & df$variable=="sensor-RaplKey (PackageID 1)" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
@@ -144,7 +144,7 @@ Package 1:
 
 Downstream perf monitoring:
 
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
   ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap70/70") & df$variable=="sensor-sensor-Downstream" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
@@ -160,7 +160,7 @@ Downstream perf monitoring:
 # Bandits
 
 ## Meta-Action type
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=2}
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=2}
   ggplot(df_control[which(df_control["variable"] == "actionType"),], aes(x=time, y=as.character(value), group=iteration,color=iteration) )+
     geom_point() +
     facet_grid(rows = vars(variable),scales="free_y") +
@@ -170,7 +170,7 @@ Downstream perf monitoring:
 
 
 ## Sensor outputs
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=5}
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=5}
   ggplot(df_control[which(grepl("sensor",df_control$variable)),],
          aes(x=time, y=as.numeric(as.character(value)), group=iteration,color=iteration) )+
     geom_line() +
@@ -182,23 +182,10 @@ Downstream perf monitoring:
     ylab("sensor")
 ```
 
-## Raw loss, constraint 0
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=6}
-  ggplot(df_control[which(df_control$variable == "loss" | df_control$variable == "constraint-0" | df_control$variable == "objective-0"),],
-         aes(x=time, y=as.numeric(as.character(value)), group=iteration,color=iteration) )+
-    geom_line() +
-    geom_point() +
-    scale_x_datetime()+
-    facet_grid(rows = vars(variable),scales="free_y") +
-    #geom_hline(yintercept = (1.0/1.1), linetype="dashed", color = "red")
-    theme(strip.text.y = element_text(angle = 0)) +
-    xlab("t") +
-    ylab("loss")
-```
 
 
 ## Objectives (RAPL sensors)
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=4}
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=4}
   ggplot(df_control[which(grepl("objective",df_control$"variable")),],
          aes(x=time, y=as.numeric(as.character(value)), group=iteration,color=iteration) )+
     geom_line() +
@@ -209,7 +196,7 @@ Downstream perf monitoring:
 ```
 
 ## Pull counts
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
   ggplot(df_control[which(grepl("pulls",df_control$"variable")),],
          aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
     geom_line() +
@@ -219,7 +206,7 @@ Downstream perf monitoring:
 ```
 
 ## Average loss evolution.
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=8}
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=8}
   df_loss = df_control[which(df_control["variable"] == "loss"),]
   ggplot(df_loss,
          aes(x = time,
@@ -257,7 +244,7 @@ Downstream perf monitoring:
 ```
 
 ## Average observed constraints.
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=12}
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=12}
   ggplot(df_control[which(grepl("avgCst",df_control$"variable")),],
          aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
     geom_line() +
@@ -268,7 +255,7 @@ Downstream perf monitoring:
 ```
 
 ## Average observed objs
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=12}
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=4}
   ggplot(df_control[which(grepl("avgObj",df_control$"variable")),],
          aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
     geom_line() +
@@ -279,13 +266,14 @@ Downstream perf monitoring:
 
 # Randomized strategy
 
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-unique(df_random$variable)
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+  unique(df_random$variable)
+  summary(df_random)
 ```
 
 
 ## Pull counts
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
   ggplot(df_random[which(grepl("pulls",df_random$"variable")),],
          aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
     geom_line() +
@@ -298,7 +286,7 @@ unique(df_random$variable)
 
 ### Throughputs (arm values)
 
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=6}
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=6}
   df1=df_control[which(grepl("avgMeasurement-Downstream",df_control$"variable")),]
   df2=df_control[which(grepl("avgRef-Downstream",df_control$"variable")),]
   df1$tag="measurements"
@@ -318,7 +306,7 @@ unique(df_random$variable)
 
 ### Package 0 (arm values)
 
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=6}
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=6}
   df1=df_control[which(grepl("avgMeasurement-RaplKey \\(PackageID 0",df_control$"variable")),]
   df2=df_control[which(grepl("avgRef-RaplKey \\(PackageID 0",df_control$"variable")),]
   df1$tag="measurements"
@@ -338,7 +326,7 @@ unique(df_random$variable)
 
 ### Package 1 (arm values)
 
-```{r, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=6}
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=6}
   df1=df_control[which(grepl("avgMeasurement-RaplKey \\(PackageID 1",df_control$"variable")),]
   df2=df_control[which(grepl("avgRef-RaplKey \\(PackageID 1",df_control$"variable")),]
   df1$tag="measurements"
@@ -354,4 +342,59 @@ unique(df_random$variable)
     scale_x_datetime()+
     theme(strip.text.y = element_text(angle = 0))+
     facet_grid(rows = vars(iteration))
+```
+
+## Internal values (debugging)
+
+### objective computations
+
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=12}
+  ggplot(df_control[which(grepl("reportEvaluatedObjectives|sensor", df_control$variable)),],
+         aes(x=time, y=as.numeric(as.character(value)), group=iteration,color=iteration) )+
+    geom_line() +
+    geom_point() +
+    scale_x_datetime()+
+    facet_grid(rows = vars(variable),scales="free_y") +
+    theme(strip.text.y = element_text(angle = 0)) +
+    xlab("t") +
+    ylab("hco")
+```
+
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=6}
+  ggplot(df_control[which(grepl("reportNormalizedObjectives", df_control$variable)),],
+         aes(x=time, y=as.numeric(as.character(value)), group=iteration,color=iteration) )+
+    geom_line() +
+    geom_point() +
+    scale_x_datetime()+
+    facet_grid(rows = vars(variable),scales="free_y") +
+    theme(strip.text.y = element_text(angle = 0)) +
+    xlab("t") +
+    ylab("hco")
+```
+
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=12}
+  ggplot(df_control[which(grepl("reportEvaluatedConstraints", df_control$variable)),],
+         aes(x=time, y=as.numeric(as.character(value)), group=iteration,color=iteration) )+
+    geom_line() +
+    geom_point() +
+    scale_x_datetime()+
+    facet_grid(rows = vars(variable),scales="free_y") +
+    theme(strip.text.y = element_text(angle = 0)) +
+    xlab("t") +
+    ylab("hco")
+```
+
+
+## pure bandit plots
+
+```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=6}
+  ggplot(df_control[which(df_control$variable == "constraint-0" | df_control$variable == "objective-0"),],
+         aes(x=time, y=as.numeric(as.character(value)), group=iteration,color=iteration) )+
+    geom_line() +
+    scale_x_datetime()+
+    facet_grid(rows = vars(variable),scales="free_y") +
+    geom_hline(yintercept = (1.0/1.1), linetype="dashed", color = "red") +
+    theme(strip.text.y = element_text(angle = 0)) +
+    xlab("t") +
+    ylab("hco")
 ```

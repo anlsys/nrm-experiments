@@ -101,13 +101,29 @@ def do_workload(host, baseActions, daemonCfg, workload):
                         )
                         counter = counter + 1
                     counter = 0
-                    for value in meta["innerDecision"]["reportEvaluatedObjectives"]:
+                    for value in meta["innerDecision"]["reportNormalizedObjectives"]:
                         print(value)
+                        history["reportNormalizedObjectives(weight)-" + str(counter)].append((t, value[0]))
+                        history["reportNormalizedObjectives(value)-" + str(counter)].append((t, value[1]))
+                        counter = counter + 1
+                    counter = 0
+                    for value in meta["innerDecision"]["reportEvaluatedConstraints"]:
+                        print(value)
+                        interval = value[2]['i']
+                        history["reportEvaluatedConstraints(threshold)-" + str(counter)].append((t, value[0]))
+                        history["reportEvaluatedConstraints(value)-" + str(counter)].append((t, value[1]))
+                        history["reportEvaluatedConstraints(inf)-" + str(counter)].append((t, interval[0]))
+                        history["reportEvaluatedConstraints(sup)-" + str(counter)].append((t, interval[1]))
+                        counter = counter + 1
+                    counter = 0
+                    for value in meta["innerDecision"]["reportEvaluatedObjectives"]:
+                        interval = value[2]['i']
                         history["reportEvaluatedObjectives(weight)-" + str(counter)].append((t, value[0]))
                         history["reportEvaluatedObjectives(measurement)-" + str(counter)].append((t, value[1]))
-                        history["reportEvaluatedObjectives(ranges)-" + str(counter)].append((t, value[2]))
+                        history["reportEvaluatedObjectives(inf)-" + str(counter)].append((t, interval[0]))
+                        history["reportEvaluatedObjectives(sup)-" + str(counter)].append((t, interval[1]))
                         counter = counter + 1
-                    history["loss"].append((t, meta["innerDecision"]["loss"]))
+                    history["hco"].append((t, meta["innerDecision"]["loss"]))
                 bandit = controller["bandit"]
                 if "lagrange" in bandit.keys():
                     for arm in bandit["lagrange"]["lagrange"]["weights"]:

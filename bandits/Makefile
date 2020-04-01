@@ -7,7 +7,7 @@ all: internal-control-analysis.pdf
 %.pdf: %.tex
 	latexmk -pdf
 
-%.md: %.rmd
+%.md: %.rmd internal-control-experiments.csv
 	Rscript -e 'library(knitr); knit("$<",output="$@")' internal-control-experiments.csv
 
 .PHONY:clean
