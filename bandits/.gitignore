@@ -1,4 +1,6 @@
 figure
+.Rhistory
+cache
 *.csv
 .ipynb*
 *.aux
