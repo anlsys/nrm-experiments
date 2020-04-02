@@ -33,30 +33,30 @@ raplCfg = {
 daemonCfgs = {}
 
 for i in experimentSamplingRange:
-    # for actions in actionLists:
-        # daemonCfgs[(i, "pcap" + experiment.ActionsShorthandDescription(actions))] = (
-            # actions,
-            # {
-                # "controlCfg": {"fixedPower": {"fromuW": 1000000}},
-                # "raplCfg": raplCfg,
-                # "verbose": "Info",
-            # },
-        # )
-    # daemonCfgs[(i, "controlOn")] = (
-        # None,
-        # {
-            # "controlCfg": {
-                # "staticPower": {"fromuW": staticPower},
-                # "referenceMeasurementRoundInterval": referenceMeasurementRoundInterval,
-                # "learnCfg": {"contextual": {"horizon": 300}},
-                # "speedThreshold": 1.11,
-                # "minimumControlInterval": {"fromuS": 3000000},
-                # "hint": {"only": hintActionList},
-            # },
-            # "raplCfg": raplCfg,
-            # "verbose": "Info",
-        # },
-    # )
+    for actions in actionLists:
+        daemonCfgs[(i, "pcap" + experiment.ActionsShorthandDescription(actions))] = (
+            actions,
+            {
+                "controlCfg": {"fixedPower": {"fromuW": 1000000}},
+                "raplCfg": raplCfg,
+                "verbose": "Info",
+            },
+        )
+    daemonCfgs[(i, "controlOn")] = (
+        None,
+        {
+            "controlCfg": {
+                "staticPower": {"fromuW": staticPower},
+                "referenceMeasurementRoundInterval": referenceMeasurementRoundInterval,
+                "learnCfg": {"contextual": {"horizon": 300}},
+                "speedThreshold": 1.11,
+                "minimumControlInterval": {"fromuS": 3000000},
+                "hint": {"only": hintActionList},
+            },
+            "raplCfg": raplCfg,
+            "verbose": "Info",
+        },
+    )
     daemonCfgs[(i, "randomUniform")] = (
         None,
         {
