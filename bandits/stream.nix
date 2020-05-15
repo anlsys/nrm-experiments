@@ -1,8 +1,14 @@
-let pkgs = (import ../../../dev/default.nix { });
-in pkgs.hack.overrideAttrs (o: {
+{
+
+pkgs ? (import ../../hnrm/default.nix { }),
+
+drv ? (import ../../hnrm/shell.nix {
+  inherit pkgs;
+  experiment = true;
+}) }:
+drv.overrideAttrs (o: {
 
   buildInputs = o.buildInputs
-    ++ [ (pkgs.expe.override { iterationCount = "16000"; })];
-    #++ [ (pkgs.stream.override { iterationCount = "1000"; })];
+    ++ [ (pkgs.stream.override { iterationCount = "16000"; }) ];
 
 })

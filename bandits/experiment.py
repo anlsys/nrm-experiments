@@ -43,7 +43,7 @@ def ActionsShorthandDescription(arm):
     return "/".join([str(a.actuatorValue) for a in arm])
 
 
-def do_workload(host, baseActions, daemonCfg, workload):
+def do_workload(host, baseActions, daemonCfg, workload, actuations=[]):
     host.start_daemon(daemonCfg)
     print("Starting the workload")
     host.run_workload(workload)

@@ -1,4 +1,4 @@
-let Cfg = ../../../resources/types/Cfg.dhall
+let Cfg = ./Cfg.dhall
 
 let Hint =
       < Full
