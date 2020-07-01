@@ -11,7 +11,11 @@
   library(stringr)
   library(latex2exp)
   library(scales)
+
+  print("attempting to load repr")
   library(repr)
+  print("done")
+
   options(repr.plot.width=4, repr.plot.height=3)
 
   df <- read.csv("internal-control-experiments.csv")
@@ -49,7 +53,8 @@
 
 # Total progress reporting
 ```{r}
-  df_progress = df[which(df$variable == "sensor-sensor-Downstream"), c("name","value","iteration")]
+  df_progress = df[which(df$variable == "sensor-sensor-Downstream")
+                  , c("name","value","iteration")]
   df_progress$value=as.numeric(as.character(df_progress$value))
   df_progress = ddply(df_progress, .(name,iteration), summarize, instructions=mean(value), instructionsSd = sd(value) )
   print(df_progress)
