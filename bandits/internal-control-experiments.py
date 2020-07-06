@@ -22,7 +22,7 @@ hintActionList = [
 ]
 
 staticPower = 200000000
-referenceMeasurementRoundInterval = 10
+referenceMeasurementRoundInterval = 20
 
 raplCfg = {
     "raplActions": [{"fromuW": 1000000 * p} for p in powerCapRanges],
@@ -50,7 +50,7 @@ for i in experimentSamplingRange:
                 "referenceMeasurementRoundInterval": referenceMeasurementRoundInterval,
                 "learnCfg": {"contextual": {"horizon": 300}},
                 "speedThreshold": 1.11,
-                "minimumControlInterval": {"fromuS": 3000000},
+                "minimumControlInterval": {"fromuS": 10000000},
                 "hint": {"only": hintActionList},
             },
             "raplCfg": raplCfg,
@@ -65,7 +65,7 @@ for i in experimentSamplingRange:
                 "referenceMeasurementRoundInterval": referenceMeasurementRoundInterval,
                 "learnCfg": {"random": None},
                 "speedThreshold": 1.11,
-                "minimumControlInterval": {"fromuS": 3000000},
+                "minimumControlInterval": {"fromuS": 10000000},
                 "hint": {"only": hintActionList},
             },
             "raplCfg": raplCfg,

@@ -11,10 +11,7 @@
   library(stringr)
   library(latex2exp)
   library(scales)
-
-  print("attempting to load repr")
   library(repr)
-  print("done")
 
   options(repr.plot.width=4, repr.plot.height=3)
 
