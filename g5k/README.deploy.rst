@@ -80,6 +80,15 @@ It takes about 5—10 minutes to deploy the image on the node.
 Launching Jupyter notebook
 --------------------------
 
+.. warning:: **Obsolete, use `nix-shell --arg jupyter true --arg experiment true --run 'jupyter-notebook --allow-root --no-browser --ip="0.0.0.0"'`**
+
+.. warning:: **Skip the cell calling `shake.sh`**
+
+.. todo:: Rewrite this section
+
+----
+
+
 All required software is installed on the deployed image.
 From the frontend, the notebook can be launched with the following command:
 
