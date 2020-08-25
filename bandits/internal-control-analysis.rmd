@@ -120,7 +120,7 @@
 Package 0:
 
 ```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap70/70"|df$name=="pcap70/250"|df$name=="pcap250/70") & df$variable=="sensor-RaplKey (PackageID 0)" ) ,],
+  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap100/100"|df$name=="pcap100/250"|df$name=="pcap250/100") & df$variable=="sensor-RaplKey (PackageID 0)" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
     geom_line() +
@@ -134,7 +134,7 @@ Package 0:
 Package 1:
 
 ```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  ggplot(data=df[which((df$name=="pcap250/250" | df$name=="pcap70/70"|df$name=="pcap70/250" | df$name=="pcap250/70") & df$variable=="sensor-RaplKey (PackageID 1)" ) ,],
+  ggplot(data=df[which((df$name=="pcap250/250" | df$name=="pcap100/100"|df$name=="pcap100/250" | df$name=="pcap250/100") & df$variable=="sensor-RaplKey (PackageID 1)" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
     geom_line() +
@@ -147,7 +147,7 @@ Package 1:
 Downstream perf monitoring:
 
 ```{r, cache=TRUE, echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap70/70") & df$variable=="sensor-sensor-Downstream" ) ,],
+  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap100/100") & df$variable=="sensor-sensor-Downstream" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
     geom_line() +

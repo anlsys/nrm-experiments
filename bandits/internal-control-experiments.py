@@ -8,8 +8,8 @@ import experiment
 
 experimentSamplingRange = range(0, 4)
 # experimentSamplingRange = range(0, 6)
-powerCapRanges = [70, 250]
-admissible = [(250, 250), (70, 70)]
+powerCapRanges = [100, 250]
+admissible = [(250, 250), (100, 100)]
 actionLists = [
     [nrm.Action("RaplKey (PackageID 0)", p0), nrm.Action("RaplKey (PackageID 1)", p1)]
     for p0, p1 in admissible

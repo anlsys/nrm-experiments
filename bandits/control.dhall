@@ -36,7 +36,7 @@ let ControlCfg =
           { fixedPower : { fromuW : Double } }
       >
 
-in      ../../../resources/defaults/Cfg.dhall
+in      ../../hnrm/hsnrm/resources/defaults/Cfg.dhall
       ⫽ { controlCfg =
             ControlCfg.ControlCfg
             { minimumControlInterval =

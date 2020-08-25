@@ -12,7 +12,7 @@ all: internal-control-analysis.pdf
 
 .PHONY:clean
 clean:
-	rm -f *.md *.pdf
+	rm -rf *.md *.pdf *.fls *.log *.aux *latexmk __pycache__ cache figure
 
 .PHONY:clean
 browse: all
