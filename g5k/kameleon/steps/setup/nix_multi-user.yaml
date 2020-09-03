@@ -1,0 +1,54 @@
+# - nix_multi-user:
+#   - nix_version: 2.3.6
+#   - nix_variant: x86_64-linux
+
+- nix_distrib: $${nix_version}-$${nix_variant}
+- nix_location: https://releases.nixos.org/nix/nix-$${nix_version}
+- nix_gid: 500
+- nix_home: /tmp/nix-$${nix_distrib}
+
+#------------------------------------------------------------------------------
+
+- install_build_dependencies:
+  - exec_in: apt-get update --yes
+  - exec_in: apt-get install --yes --no-install-recommends curl sudo
+
+- retrieve_nix:
+  - download_file_in:
+    - $${nix_location}/nix-$${nix_distrib}.tar.xz
+    - $${nix_home}.tar.xz
+  - exec_in: tar -xf $${nix_home}.tar.xz -C /tmp
+  - exec_in: rm $${nix_home}.tar.xz
+
+- init_install_env:
+  # Nix installer uses a non-root user with sudo :S (why not root?)
+  - exec_in: groupadd --system nix-installer
+  - exec_in: useradd --system --gid nix-installer --home-dir $${nix_home} nix-installer
+  - exec_in: |  # allow use of sudo without password for nix-installer
+      cat > /etc/sudoers.d/nix-installer-nopasswd <<EOF
+      nix-installer ALL=(ALL:ALL) NOPASSWD: ALL
+      EOF
+  - exec_in: chmod 0440 /etc/sudoers.d/nix-installer-nopasswd
+  - rescue:
+    - exec_in: visudo --check --strict
+    - breakpoint: "error setting sudo nopasswd policy for nix-installer"
+
+- install_nix:
+  - exec_in: runuser -u nix-installer -- sh $${nix_home}/install --daemon
+  - exec_in: source /etc/profile  # bring Nix definitions in shell scope
+  # restrict usage of Nix to authorized users (i.e., members of nix-users)
+  - exec_in: groupadd --system --gid $${nix_gid} nix-users
+  - exec_in: chgrp nix-users /nix/var/nix/daemon-socket
+  - exec_in: chmod 770 /nix/var/nix/daemon-socket
+
+- clean_install_env:
+  - exec_in: userdel --remove --force nix-installer
+  - exec_in: rm /etc/sudoers.d/nix-installer-nopasswd
+
+- clean_build_dependencies:
+  - exec_in: apt-get purge --yes curl sudo
+
+- check_nix_install:
+  - rescue:
+    - exec_in: nix-shell --packages nix-info --run "nix-info -m"
+    - breakpoint: "failed to install Nix"

@@ -4,12 +4,12 @@
 #
 #==============================================================================
 ---
-extend: grid5000/from_kadeploy_environment/debian10-x64-custom.yaml
+extend: grid5000/from_grid5000_environment/base.yaml
 
 global:
-  nix_version: 2.3.3
+  nix_version: 2.3.6
   nix_variant: x86_64-linux
-  hnrm_version: master
+  hnrm_version: expe-0.2-rc3
   install_dir: /opt
   image_size: 20G
   qemu_memory_size: 8G
@@ -19,7 +19,7 @@ bootstrap:
 
 setup:
   - "@base"
-  - nix_single-user
+  - nix_multi-user
   - hnrm
 
 export:
