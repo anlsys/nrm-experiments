@@ -12,9 +12,10 @@ drv.overrideAttrs (o: {
 
   buildInputs = o.buildInputs ++ [
 
-    (pkgs.stream.override { iterationCount = "16000"; })
+    # (pkgs.stream.override { iterationCount = "16000"; })
 
-    pkgs.amg
+    # pkgs.amg
+    pkgs.nas
 
   ];
 

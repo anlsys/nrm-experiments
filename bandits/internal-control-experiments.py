@@ -76,6 +76,8 @@ for i in experimentSamplingRange:
 
 stream = experiment.perfwrapped("stream_c", [])
 
+nas = experiment.perfwrapped("nice", ["-n","16","ep.E.x"])
+
 lammps = experiment.perfwrapped(
     "mpiexec",
     ["-n", "24", "amg", "-problem", "2", "-n", "90", "90", "90", "-P", "2", "12", "1"],
@@ -92,7 +94,7 @@ print(keys)
 
 for key in keys:
     baseActions, cfg = daemonCfgs[key]
-    results[key] = experiment.do_workload(host, baseActions, cfg, stream)
+    results[key] = experiment.do_workload(host, baseActions, cfg, nas)
 
 import pickle
 
