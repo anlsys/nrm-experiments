@@ -77,6 +77,13 @@ def do_workload(host, baseActions, daemonCfg, workload, actuations=[]):
             print(".", end="")
         if "pubCPD" in msg:
             print("R")
+        if "pubPerformance" in msg:
+            print(msg)
+            content = msg["pubPerformance"]
+            t = content[0]
+            id = content[1]
+            value = content[2]
+            history["pubPerformance"].append((t, value))
         if "pubAction" in msg:
             t, contents, meta, controller = msg["pubAction"]
             if "bandit" in controller.keys():
