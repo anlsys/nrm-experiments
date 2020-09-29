@@ -16,68 +16,76 @@ actionLists = [
     for p0, p1 in admissible
 ]
 
-hintActionList = [
-    [{"actuatorID": "RaplKey (PackageID 0)", "actuatorValue": p0}
-    , {"actuatorID": "RaplKey (PackageID 1)", "actuatorValue": p1}]
-    for (p0, p1) in admissible
-]
+def mkA(tuplepower):
+    p0,p1 = tuplepower
+    return([{"actuatorID": "RaplKey (PackageID 0)", "actuatorValue": p0}
+          , {"actuatorID": "RaplKey (PackageID 1)", "actuatorValue": p1}])
+
+hintActionList = {
+      "neHead" : mkA(admissible[0]),
+      "neTail" : [mkA(x) for x in admissible[1:]]
+    }
 
 staticPower = 200000000
 referenceMeasurementRoundInterval = 20
 
 raplCfg = {
     "raplActions": [{"fromuW": 1000000 * p} for p in powerCapRanges],
-    "raplFrequency": {"fromHz": 1},
+    "referencePower": {"fromuW": 2500000},
     "raplPath": "/sys/devices/virtual/powercap/intel-rapl",
 }
 
 daemonCfgs = {}
 
 for i in experimentSamplingRange:
-    for actions in actionLists:
-        daemonCfgs[(i, "pcap" + experiment.ActionsShorthandDescription(actions))] = (
-            actions,
-            {
-                "controlCfg": {"fixedPower": {"fromuW": 1000000}},
-                "raplCfg": raplCfg,
-                "verbose": "Info",
-            },
-        )
+    # for actions in actionLists:
+    #     daemonCfgs[
+    #       (i, "pcap" + experiment.ActionsShorthandDescription(actions))] = (
+    #         actions,
+    #         {
+    #             "controlCfg": {"fixedPower": {"fromuW": 1000000}},
+    #             "raplCfg": raplCfg,
+    #             "verbose": "Info",
+    #         },
+    #     )
     daemonCfgs[(i, "controlOn")] = (
         None,
         {
             "controlCfg": {
                 "staticPower": {"fromuW": staticPower},
-                "referenceMeasurementRoundInterval": referenceMeasurementRoundInterval,
+                "referenceMeasurementRoundInterval":
+                  referenceMeasurementRoundInterval,
                 "learnCfg": {"contextual": {"horizon": 300}},
                 "speedThreshold": 1.11,
                 "minimumControlInterval": {"fromuS": 10000000},
+                "minimumWaitInterval": {"fromuS": 3000000},
                 "hint": {"only": hintActionList},
             },
             "raplCfg": raplCfg,
             "verbose": "Info",
         },
     )
-    daemonCfgs[(i, "randomUniform")] = (
-        None,
-        {
-            "controlCfg": {
-                "staticPower": {"fromuW": staticPower},
-                "referenceMeasurementRoundInterval": referenceMeasurementRoundInterval,
-                "learnCfg": {"random": None},
-                "speedThreshold": 1.11,
-                "minimumControlInterval": {"fromuS": 10000000},
-                "hint": {"only": hintActionList},
-            },
-            "raplCfg": raplCfg,
-            "verbose": "Debug",
-        },
-    )
+    # daemonCfgs[(i, "randomUniform")] = (
+    #     None,
+    #     {
+    #         "controlCfg": {
+    #             "staticPower": {"fromuW": staticPower},
+    #             "referenceMeasurementRoundInterval":
+    #               referenceMeasurementRoundInterval,
+    #             "learnCfg": {"random": None},
+    #             "speedThreshold": 1.11,
+    #             "minimumControlInterval": {"fromuS": 10000000},
+    #             "hint": {"only": hintActionList},
+    #         },
+    #         "raplCfg": raplCfg,
+    #         "verbose": "Debug",
+    #     },
+    # )
 
 
 stream = experiment.perfwrapped("stream_c", [])
 
-nas = experiment.perfwrapped("nice", ["-n","16","ep.E.x"])
+nas = experiment.perfwrapped("nice", ["-n","16","ep.D.x"])
 
 lammps = experiment.perfwrapped(
     "mpiexec",
@@ -95,6 +103,7 @@ print(keys)
 
 for key in keys:
     baseActions, cfg = daemonCfgs[key]
+    print(cfg)
     results[key] = experiment.do_workload(host, baseActions, cfg, nas)
 
 import pickle
