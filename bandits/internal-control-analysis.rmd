@@ -172,10 +172,10 @@ Downstream perf monitoring (raw, before integrator):
 
 ```
 
-
+\newpage 
 # Bandits
 
-## Meta-Action type
+Meta-Action type  
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=2}
   ggplot(df_control[which(df_control["variable"] == "actionType"),], aes(x=time, y=as.character(value), group=iteration,color=iteration) )+
     geom_point() +
@@ -184,8 +184,7 @@ Downstream perf monitoring (raw, before integrator):
     theme(strip.text.y = element_text(angle =0))
 ```
 
-
-## Sensor outputs
+Sensor measurements  
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=5}
   ggplot(df_control[which(grepl("sensor",df_control$variable)),],
          aes(x=time, y=as.numeric(as.character(value)), group=iteration,color=iteration) )+
@@ -195,34 +194,47 @@ Downstream perf monitoring (raw, before integrator):
     theme(strip.text.y = element_text(angle = 0)) +
     facet_grid(rows = vars(variable),scales="free_y") +
     xlab("t") +
-    ylab("sensor")
+    ylab("sensor values")
 ```
 
-
-
-## Objectives (RAPL sensors)
-```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=4}
+Bandit cost (roundwise, post-normalization via metadata)  
+```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=2}
   ggplot(df_control[which(grepl("objective",df_control$"variable")),],
          aes(x=time, y=as.numeric(as.character(value)), group=iteration,color=iteration) )+
     geom_line() +
     geom_point() +
-    scale_x_datetime()+
+    scale_x_datetime() +
+    ylab("round cost") +
     theme(strip.text.y = element_text(angle = 0)) +
     facet_grid(rows = vars(variable))
 ```
 
-## Pull counts
-```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+Constraint (roundwise)  
+```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=2}
+  ggplot(df_control[which(grepl("constraint",df_control$"variable")),],
+         aes(x=time, y=as.numeric(as.character(value)), group=iteration,color=iteration) )+
+    geom_line() +
+    geom_point() +
+    scale_x_datetime()+
+    ylab("round constraint value") +
+    theme(strip.text.y = element_text(angle = 0)) +
+    facet_grid(rows = vars(variable))
+```
+
+Arm pulls  
+```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=2}
   ggplot(df_control[which(grepl("pulls",df_control$"variable")),],
          aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
     geom_line() +
     scale_x_datetime()+
+    ylab("cumulative pull count") +
     theme(strip.text.y = element_text(angle = 0))+
     facet_grid(rows = vars(iteration))
 ```
 
 ## Average loss evolution.
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=8}
+  print(unique(df_control["variable"]))
   df_loss = df_control[which(df_control["variable"] == "loss"),]
   ggplot(df_loss,
          aes(x = time,
@@ -412,5 +424,4 @@ Downstream perf monitoring (raw, before integrator):
     geom_hline(yintercept = (1.0/1.1), linetype="dashed", color = "red") +
     theme(strip.text.y = element_text(angle = 0)) +
     xlab("t") +
-    ylab("hco")
 ```
