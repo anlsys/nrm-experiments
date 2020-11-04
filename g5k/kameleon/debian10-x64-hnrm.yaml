@@ -7,10 +7,14 @@
 extend: grid5000/from_grid5000_environment/base.yaml
 
 global:
-  nix_version: 2.3.6
+  nix_version: 2.3.7
   nix_variant: x86_64-linux
-  hnrm_version: expe-0.2-rc3
+  hnrm_version: expe-0.3
   install_dir: /opt
+
+  grid5000_environment_import_name: debian10-x64-min
+  grid5000_environment_export_description: hnrm on $${grid5000_environment_import_name} [$${hnrm_version}]
+
   image_size: 20G
   qemu_memory_size: 8G
 
@@ -21,6 +25,7 @@ setup:
   - "@base"
   - nix_multi-user
   - hnrm
+  - xplaunch
 
 export:
   - "@base"

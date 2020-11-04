@@ -7,31 +7,35 @@ import random
 import nrm.tooling as nrm
 import experiment
 
-experimentSamplingRange = range(0, 4)
+experimentSamplingRange = range(0, 1)
 # experimentSamplingRange = range(0, 6)
-powerCapRanges = [100, 250]
-admissible = [(250, 250), (100, 100)]
+powerCapRanges = [80, 250]
+admissible = [(250, 250), (80, 80)]
 actionLists = [
     [nrm.Action("RaplKey (PackageID 0)", p0), nrm.Action("RaplKey (PackageID 1)", p1)]
     for p0, p1 in admissible
 ]
 
+
 def mkA(tuplepower):
-    p0,p1 = tuplepower
-    return([{"actuatorID": "RaplKey (PackageID 0)", "actuatorValue": p0}
-          , {"actuatorID": "RaplKey (PackageID 1)", "actuatorValue": p1}])
+    p0, p1 = tuplepower
+    return [
+        {"actuatorValueID": "RaplKey (PackageID 0)", "actuatorValue": p0},
+        {"actuatorValueID": "RaplKey (PackageID 1)", "actuatorValue": p1},
+    ]
+
 
 hintActionList = {
-      "neHead" : mkA(admissible[0]),
-      "neTail" : [mkA(x) for x in admissible[1:]]
-    }
+    "neHead": mkA(admissible[0]),
+    "neTail": [mkA(x) for x in admissible[1:]],
+}
 
 staticPower = 200000000
 referenceMeasurementRoundInterval = 20
 
 raplCfg = {
-    "raplActions": [{"fromuW": 1000000 * p} for p in powerCapRanges],
-    "referencePower": {"fromuW": 2500000},
+    "raplActions": [{"microwatts": 1_000_000 * p} for p in powerCapRanges],
+    "referencePower": {"microwatts": 250_000_000},
     "raplPath": "/sys/devices/virtual/powercap/intel-rapl",
 }
 
@@ -43,7 +47,7 @@ for i in experimentSamplingRange:
     #       (i, "pcap" + experiment.ActionsShorthandDescription(actions))] = (
     #         actions,
     #         {
-    #             "controlCfg": {"fixedPower": {"fromuW": 1000000}},
+    #             "controlCfg": "ControlOff",
     #             "raplCfg": raplCfg,
     #             "verbose": "Info",
     #         },
@@ -52,14 +56,13 @@ for i in experimentSamplingRange:
         None,
         {
             "controlCfg": {
-                "staticPower": {"fromuW": staticPower},
-                "referenceMeasurementRoundInterval":
-                  referenceMeasurementRoundInterval,
-                "learnCfg": {"contextual": {"horizon": 300}},
+                "hint": hintActionList,
+                "learnCfg": {"horizon": 120},
+                "minimumControlInterval": {"microseconds": 5000000},
+                "minimumWaitInterval": {"microseconds": 1000000},
+                "referenceMeasurementRoundInterval": referenceMeasurementRoundInterval,
                 "speedThreshold": 1.11,
-                "minimumControlInterval": {"fromuS": 10000000},
-                "minimumWaitInterval": {"fromuS": 3000000},
-                "hint": {"only": hintActionList},
+                "staticPower": {"microwatts": staticPower},
             },
             "raplCfg": raplCfg,
             "verbose": "Info",
@@ -69,13 +72,14 @@ for i in experimentSamplingRange:
     #     None,
     #     {
     #         "controlCfg": {
-    #             "staticPower": {"fromuW": staticPower},
+    #             "staticPower": {"microwatts": staticPower},
     #             "referenceMeasurementRoundInterval":
     #               referenceMeasurementRoundInterval,
-    #             "learnCfg": {"random": None},
+    #             "learnCfg": {"seed": 1},
+    #             "minimumWaitInterval": {"microseconds": 3000000},
     #             "speedThreshold": 1.11,
-    #             "minimumControlInterval": {"fromuS": 10000000},
-    #             "hint": {"only": hintActionList},
+    #             "minimumControlInterval": {"microseconds": 10000000},
+    #             "hint": hintActionList,
     #         },
     #         "raplCfg": raplCfg,
     #         "verbose": "Debug",
@@ -85,7 +89,7 @@ for i in experimentSamplingRange:
 
 stream = experiment.perfwrapped("stream_c", [])
 
-nas = experiment.perfwrapped("nice", ["-n","16","ep.D.x"])
+nas = experiment.perfwrapped("nice", ["-n", "16", "ep.D.x"])
 
 lammps = experiment.perfwrapped(
     "mpiexec",
@@ -93,7 +97,6 @@ lammps = experiment.perfwrapped(
 )
 
 
-host = nrm.Local()
 results = {}
 
 keys = list(daemonCfgs.keys())
@@ -104,7 +107,7 @@ print(keys)
 for key in keys:
     baseActions, cfg = daemonCfgs[key]
     print(cfg)
-    results[key] = experiment.do_workload(host, baseActions, cfg, nas)
+    results[key] = experiment.do_workload(baseActions, cfg, nas)
 
 import pickle
 

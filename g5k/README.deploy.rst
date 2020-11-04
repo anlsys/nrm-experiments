@@ -77,17 +77,11 @@ From the shell of the chosen site fronted (here Grenoble):
 It takes about 5—10 minutes to deploy the image on the node.
 
 
+Jupyter notebook
+----------------
+
 Launching Jupyter notebook
---------------------------
-
-.. warning:: **Obsolete, use `nix-shell --arg jupyter true --arg experiment true --run 'jupyter-notebook --allow-root --no-browser --ip="0.0.0.0"'`**
-
-.. warning:: **Skip the cell calling `shake.sh`**
-
-.. todo:: Rewrite this section
-
-----
-
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 All required software is installed on the deployed image.
 From the frontend, the notebook can be launched with the following command:
@@ -98,27 +92,40 @@ From the frontend, the notebook can be launched with the following command:
 
 .. code-block:: console
 
-   $ ssh root@dahu-32 -- runuser -u nix -- bash -l <<EOF
-   > cd /opt/hnrm-master
-   > nix-shell --run 'jupyter-notebook --no-browser --ip="0.0.0.0"'
-   > EOF
-   [I 10:36:36.778 NotebookApp] Serving notebooks from local directory: /opt/hnrm-master
-   [I 10:36:36.778 NotebookApp] The Jupyter Notebook is running at:
-   [I 10:36:36.778 NotebookApp] http://(dahu-32.grenoble.grid5000.fr or 127.0.0.1):8888/?token=47e1454cf0b3905d4870676209a008d9192235ff6fdb6a1a
-   [I 10:36:36.778 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
-   [C 10:36:36.780 NotebookApp]
-   
+   $ ssh root@dahu-32 /opt/xplaunch jupyter
+   …
+   Sourcing python-catch-conflicts-hook.sh
+   Sourcing python-remove-bin-bytecode-hook.sh
+   Sourcing setuptools-build-hook
+   Using setuptoolsBuildPhase
+   Sourcing pip-install-hook
+   Using pipInstallPhase
+   Sourcing python-imports-check-hook.sh
+   Using pythonImportsCheckPhase
+   Sourcing setuptools-check-hook
+   Using setuptoolsCheckPhase
+   /nix/store/vilh5ays3ymz3xkwk0fri2a70lha7pfc-stdenv-linux/setup: line 795: /run/user/0/env-vars: Permission denied
+   [I 16:35:02.687 NotebookApp] Serving notebooks from local directory: /opt/hnrm-expe-0.3
+   [I 16:35:02.687 NotebookApp] The Jupyter Notebook is running at:
+   [I 16:35:02.687 NotebookApp] http://dahu-32.grenoble.grid5000.fr:8888/?token=9c1d649ddfcb2857a9c26e5b96e90315e11cb7ee42dab5cd
+   [I 16:35:02.687 NotebookApp]  or http://127.0.0.1:8888/?token=9c1d649ddfcb2857a9c26e5b96e90315e11cb7ee42dab5cd
+   [I 16:35:02.687 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+   [C 16:35:02.690 NotebookApp]
+       
        To access the notebook, open this file in a browser:
-           file:///run/user/0/jupyter/nbserver-23248-open.html
+           file:///home/xprunner/.local/share/jupyter/runtime/nbserver-2658-open.html
        Or copy and paste one of these URLs:
-           http://(dahu-32.grenoble.grid5000.fr or 127.0.0.1):8888/?token=47e1454cf0b3905d4870676209a008d9192235ff6fdb6a1a
+           http://dahu-32.grenoble.grid5000.fr:8888/?token=9c1d649ddfcb2857a9c26e5b96e90315e11cb7ee42dab5cd
+        or http://127.0.0.1:8888/?token=9c1d649ddfcb2857a9c26e5b96e90315e11cb7ee42dab5cd
+
 
 Once started, the Jupyter notebook displays the URL to use to access it (along
 with a token).
+This token changes on each run.
 
 
-Connection to the Jupyter notebook
-----------------------------------
+Connecting to the Jupyter notebook
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The Grid'5000 internal network is isolated from the rest of the Internet.
 To access the notebook, we rely on the ability of :command:`ssh` to forward
@@ -136,9 +143,24 @@ With the example above:
    $ ssh gre.g5k -N -L 8888:dahu-32:8888
 
 
-Modify the URL given by Jupyter by replacing the domain/port with `localhost`
-and the chosen local port.
-Access this modified URL from the local web browser.
+By default, Jupyter uses the `8888` port.
+Copy the URL with the localhost IP (i.e., http://127.0.0.1:8888/?token=9c1d649ddfcb2857a9c26e5b96e90315e11cb7ee42dab5cd), and access it from the local web browser.
+
+
+Static gain experiment
+----------------------
+
+The general form of the command is :samp:`/opt/xplaunch static-gain --powercap={pcap} -- {cmd}`
+
+.. code-block:: console
+
+   $ ssh root@dahu-32 /opt/xplaunch static-gain --powercap=150 -- stream_c -n 16000 -s 1000000
+
+
+Supported benchmarks
+  - Algebraic multigrid benchmark (AMG): `amg`
+  - NAS Parallel Benchmarks, EP: `ep.A.x`, `ep.B.x`, `ep.C.x`, `ep.D.x`, `ep.E.x`
+  - STREAM benchmark: `stream_c`
 
 
 .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. ..
