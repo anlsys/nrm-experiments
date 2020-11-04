@@ -1,17 +1,39 @@
-# Analysis
+# global analysis
 
-```{r,  echo=FALSE,  warning=FALSE}
-  library(ggplot2)
+```
+Actuators:
+  - RaplKey (PackageID 0) : Actuator {actions = [DiscreteDouble {getDiscrete = 80.0},DiscreteDouble {getDiscrete = 250.0}]}
+  - RaplKey (PackageID 1) : Actuator {actions = [DiscreteDouble {getDiscrete = 80.0},DiscreteDouble {getDiscrete = 250.0}]}
+Sensors:
+  - DownstreamCmdKey (DownstreamCmdID 77456c6d-4693-4d01-b84d-60323e0d2170) : Sensor {range = 0.0 ... 1.79654893561e11, maxFrequency = 1.0}
+  - RaplKey (PackageID 0) : Sensor {range = 0.0 ... 150.0, maxFrequency = 1.0}
+  - RaplKey (PackageID 1) : Sensor {range = 0.0 ... 150.0, maxFrequency = 1.0}
+Objectives:
+  - 1.0 : ("SENSOR: RaplKey (PackageID 0)"+"SENSOR: RaplKey (PackageID
+  1)"+200.0)/(max(0.5,min(1.5,("REF: DownstreamCmdKey (DownstreamCmdID
+  77456c6d-4693-4d01-b84d-60323e0d2170)")/("SENSOR: DownstreamCmdKey
+  (DownstreamCmdID 77456c6d-4693-4d01-b84d-60323e0d2170)"+1.0))))
+Constraints:
+  - 1.11 : max(0.5,min(1.5,("REF: DownstreamCmdKey (DownstreamCmdID
+  77456c6d-4693-4d01-b84d-60323e0d2170)")/("SENSOR: DownstreamCmdKey
+  (DownstreamCmdID 77456c6d-4693-4d01-b84d-60323e0d2170)"+1.0)))
+
+
+```
+
+```{r,  echo=FALSE,  warning=FALSE, results='hide'}
+  library(ggplot2, warn.conflicts = FALSE)
   theme_set(theme_minimal())
 
-  library(purrr)
-  library(pracma)
-  library(plyr)
-  library(dplyr)
-  library(stringr)
-  library(latex2exp)
-  library(scales)
-  library(repr)
+  library(purrr, warn.conflicts = FALSE)
+  library(knitr, warn.conflicts = FALSE)
+  library(pracma, warn.conflicts = FALSE)
+  library(plyr, warn.conflicts = FALSE)
+  library(dplyr, warn.conflicts = FALSE)
+  library(stringr, warn.conflicts = FALSE)
+  library(latex2exp, warn.conflicts = FALSE)
+  library(scales, warn.conflicts = FALSE)
+  library(repr, warn.conflicts = FALSE)
 
   options(repr.plot.width=4, repr.plot.height=3)
 
@@ -27,13 +49,12 @@
   pStatic=200
 ```
 
-```{r}
+```{r,  echo=FALSE}
   df_control = df[which(df["name"] == "controlOn"),]
   df_random = df[which(df["name"] == "randomUniform"),]
 ```
 
-# Total energy expenditure
-```{r}
+```{r,  echo=FALSE}
   df_rapl0 = df[which(df$variable == "sensor-RaplKey (PackageID 0)"), c("name","value","iteration","time")]
   df_rapl0$value=as.numeric(as.character(df_rapl0$value))
   df_rapl1 = df[which(df$variable == "sensor-RaplKey (PackageID 1)"), c("name","value","iteration","time")]
@@ -45,50 +66,46 @@
     return(tail(cumtrapz(as.numeric(ts)/3600,vs),n=1))
   }
   df_rapl = ddply(df_rapl, .(name,iteration), summarize, wh=integrateWattHours(time,value))
-  print(df_rapl)
+  # kable(df_rapl,digits=4, format.args = list(scientific = TRUE))
 ```
 
-# Total progress reporting
-```{r}
+```{r,  echo=FALSE}
   df_progress = df[which(df$variable == "sensor-sensor-Downstream")
                   , c("name","value","iteration")]
   df_progress$value=as.numeric(as.character(df_progress$value))
   df_progress = ddply(df_progress, .(name,iteration), summarize, instructions=mean(value), instructionsSd = sd(value) )
-  print(df_progress)
+  # kable(df_progress,digits=4, format.args = list(scientific = TRUE))
 ```
 
-# Runtimes
-```{r}
+```{r,  echo=FALSE}
   df_runtime = df[which(grepl("sensor",df$variable) & df$variable != "actionType"), c("name","iteration","time")]
   df_runtime = ddply(df_runtime, .(name,iteration), summarize, runtime=as.numeric(max(time),units="secs"))
-  print(df_runtime)
+  # kable(df_runtime,digits=4, format.args = list(scientific = TRUE))
 ```
 
-# Global stats.
-```{r}
+```{r,  echo=FALSE}
   df_post = df_runtime %>%
     full_join(.,df_rapl,by=c("name","iteration")) %>%
     full_join(.,df_progress,by=c("name","iteration"))
 
-  print(df_post)
-
   df_reference= filter(df_post, name == "pcap250/250")
-  print(df_reference)
+  # print(df_reference)
   runtime_reference = mean(df_reference$runtime)
   throughput_reference = mean(df_reference$instructions)
-  df_post$constraintBreach = df_post$runtime > (1.1 * runtime_reference)
-  print(df_post)
+  df_post$breach = abs (df_post$runtime - (1.1 * runtime_reference))
+
+  kable(within(df_post, rm(instructionsSd)),digits=4)
 ```
 
 
-# Average total watt-hour energy expenditure by strategy
+Average total watt-hour energy expenditure by strategy  
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
   ggplot(data=df_post, aes(x=name, y=wh) ) +
     geom_boxplot()
 
 ```
 
-# Average runtime by  strategy
+Average runtime by  strategy  
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
   ggplot(data=df_post, aes(x=name, y=runtime) ) +
     geom_boxplot() +
@@ -96,7 +113,7 @@
     geom_hline(yintercept = runtime_reference, linetype="dashed", color = "black")
 ```
 
-# Average throughput by strategy
+Average throughput by strategy  
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
   ggplot(data=df_post, aes(x=name, y=instructions) ) +
     geom_boxplot() +
@@ -109,7 +126,7 @@
     geom_boxplot()
 ```
 
-# Average power by strategy
+Average power by strategy  
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
   ggplot(data=df_post, aes(x=name, y=wh/runtime) ) +
     geom_boxplot()
@@ -120,7 +137,7 @@
 Package 0:
 
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap100/100"|df$name=="pcap100/250"|df$name=="pcap250/100") & df$variable=="sensor-RaplKey (PackageID 0)" ) ,],
+  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap80/80"|df$name=="pcap100/250"|df$name=="pcap250/100") & df$variable=="sensor-RaplKey (PackageID 0)" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
     geom_line() +
@@ -134,7 +151,7 @@ Package 0:
 Package 1:
 
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  ggplot(data=df[which((df$name=="pcap250/250" | df$name=="pcap100/100"|df$name=="pcap100/250" | df$name=="pcap250/100") & df$variable=="sensor-RaplKey (PackageID 1)" ) ,],
+  ggplot(data=df[which((df$name=="pcap250/250" | df$name=="pcap80/80"|df$name=="pcap100/250" | df$name=="pcap250/100") & df$variable=="sensor-RaplKey (PackageID 1)" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
     geom_line() +
@@ -147,7 +164,7 @@ Package 1:
 Downstream perf monitoring (after integrator):
 
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap100/100") & df$variable=="sensor-sensor-Downstream" ) ,],
+  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap80/80") & df$variable=="sensor-sensor-Downstream" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
     geom_line() +
@@ -161,7 +178,7 @@ Downstream perf monitoring (after integrator):
 Downstream perf monitoring (raw, before integrator):
 
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap100/100") & df$variable=="pubPerformance" ) ,],
+  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap80/80") & df$variable=="pubPerformance" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
     geom_line() +
@@ -232,13 +249,15 @@ Arm pulls
     facet_grid(rows = vars(iteration))
 ```
 
-## Average loss evolution.
+average loss evolution  
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=8}
-  print(unique(df_control["variable"]))
-  df_loss = df_control[which(df_control["variable"] == "loss"),]
+  # print(unique(df_control["variable"]))
+  df_loss = df_control[which(df_control["variable"] == "objective-0"),]
+  df_loss$value=as.numeric(as.character(df_loss$value))
+  # print(summary(df_loss))
   ggplot(df_loss,
          aes(x = time,
-             y = cumsum(as.numeric(as.character(value))) / as.numeric(time,unit="sec"),
+             y = cumsum(value) / seq_along(value),
              group=iteration,
              color=iteration))+
     geom_line() +
@@ -249,40 +268,27 @@ Arm pulls
     ylab("average loss")
 ```
 
-## Internal bandit parameters
-```
-  ggplot(df_control[which(grepl("proba",df_control$"variable")),],
-         aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
+average constraint evolution  
+```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=8}
+  # print(unique(df_control["variable"]))
+  df_constraint = df_control[which(df_control["variable"] == "constraint-0"),]
+  df_constraint$value=as.numeric(as.character(df_constraint$value))
+  # print(summary(df_constraint))
+  ggplot(df_constraint,
+         aes(x = time,
+             y = cumsum(value) / seq_along(value),
+             group=iteration,
+             color=iteration))+
     geom_line() +
+    geom_hline(yintercept = 1.1, linetype="dashed", color = "red") +
     scale_x_datetime()+
-    theme(strip.text.y = element_text(angle = 0))+
-    facet_grid(rows = vars(iteration),scales="free_y")+
-    ylab("pull probabilities")
+    facet_grid(rows = vars(variable),scales="free_y") +
+    theme(strip.text.y = element_text(angle =0)) +
+    xlab("t") +
+    ylab("average constraint")
 ```
 
-```
-  ggplot(df_control[which(grepl("cumulativeLoss",df_control$"variable")),],
-         aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
-    geom_line() +
-    scale_x_datetime()+
-    theme(strip.text.y = element_text(angle = 0))+
-    facet_grid(rows = vars(iteration),scales="free_y")+
-    ylab("cumulative losses")
-
-```
-
-## Average observed constraints.
-```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=12}
-  ggplot(df_control[which(grepl("avgCst",df_control$"variable")),],
-         aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
-    geom_line() +
-    scale_x_datetime()+
-    geom_hline(yintercept = 1/0.9, linetype="dashed", color = "red") +
-    theme(strip.text.y = element_text(angle = 0))+
-    facet_grid(rows = vars(iteration))
-```
-
-## Average observed objs
+## Bandit: Average observed objs
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=4}
   ggplot(df_control[which(grepl("avgObj",df_control$"variable")),],
          aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
@@ -292,81 +298,12 @@ Arm pulls
     facet_grid(rows = vars(iteration))
 ```
 
-# Randomized strategy
+# Randomized strategy : pull counts
 
-```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  unique(df_random$variable)
-  summary(df_random)
-```
-
-
-## Pull counts
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
   ggplot(df_random[which(grepl("pulls",df_random$"variable")),],
          aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
     geom_line() +
-    scale_x_datetime()+
-    theme(strip.text.y = element_text(angle = 0))+
-    facet_grid(rows = vars(iteration))
-```
-
-## online sensor averages
-
-### Throughputs (arm values)
-
-```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=6}
-  df1=df_control[which(grepl("avgMeasurement-Downstream",df_control$"variable")),]
-  df2=df_control[which(grepl("avgRef-Downstream",df_control$"variable")),]
-  df1$tag="measurements"
-  df2$tag="references"
-  df=rbind(df2,df1)
-  df$variable=gsub("avgRef-","",df$variable)
-  df$variable=gsub("avgMeasurement-","",df$variable)
-  df$variable=factor(df$variable)
-  df$value = as.numeric(as.character(df$value))
-
-  ggplot(df) +
-    geom_line(aes(x=time, y=value, linetype=tag, color=variable, group=interaction(variable,tag))) +
-    scale_x_datetime()+
-    theme(strip.text.y = element_text(angle = 0))+
-    facet_grid(rows = vars(iteration))
-```
-
-### Package 0 (arm values)
-
-```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=6}
-  df1=df_control[which(grepl("avgMeasurement-RaplKey \\(PackageID 0",df_control$"variable")),]
-  df2=df_control[which(grepl("avgRef-RaplKey \\(PackageID 0",df_control$"variable")),]
-  df1$tag="measurements"
-  df2$tag="references"
-  df=rbind(df2,df1)
-  df$variable=gsub("avgRef-","",df$variable)
-  df$variable=gsub("avgMeasurement-","",df$variable)
-  df$variable=factor(df$variable)
-  df$value = as.numeric(as.character(df$value))
-
-  ggplot(df) +
-    geom_line(aes(x=time, y=value, linetype=tag, color=variable, group=interaction(variable,tag))) +
-    scale_x_datetime()+
-    theme(strip.text.y = element_text(angle = 0))+
-    facet_grid(rows = vars(iteration))
-```
-
-### Package 1 (arm values)
-
-```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=6}
-  df1=df_control[which(grepl("avgMeasurement-RaplKey \\(PackageID 1",df_control$"variable")),]
-  df2=df_control[which(grepl("avgRef-RaplKey \\(PackageID 1",df_control$"variable")),]
-  df1$tag="measurements"
-  df2$tag="references"
-  df=rbind(df2,df1)
-  df$variable=gsub("avgRef-","",df$variable)
-  df$variable=gsub("avgMeasurement-","",df$variable)
-  df$variable=factor(df$variable)
-  df$value = as.numeric(as.character(df$value))
-
-  ggplot(df) +
-    geom_line(aes(x=time, y=value, linetype=tag, color=variable, group=interaction(variable,tag))) +
     scale_x_datetime()+
     theme(strip.text.y = element_text(angle = 0))+
     facet_grid(rows = vars(iteration))
@@ -412,16 +349,87 @@ Arm pulls
     ylab("hco")
 ```
 
+## meta-control statistics on sensors
 
-## pure bandit plots
+Throughputs (arm values)
 
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=6}
-  ggplot(df_control[which(df_control$variable == "constraint-0" | df_control$variable == "objective-0"),],
-         aes(x=time, y=as.numeric(as.character(value)), group=iteration,color=iteration) )+
+  df1=df_control[which(grepl("avgMeasurement-Downstream",df_control$"variable")),]
+  df2=df_control[which(grepl("avgRef-Downstream",df_control$"variable")),]
+  df1$tag="measurements"
+  df2$tag="references"
+  df=rbind(df2,df1)
+  df$variable=gsub("avgRef-","",df$variable)
+  df$variable=gsub("avgMeasurement-","",df$variable)
+  df$variable=factor(df$variable)
+  df$value = as.numeric(as.character(df$value))
+
+  ggplot(df) +
+    geom_line(aes(x=time, y=value, linetype=tag, color=variable, group=interaction(variable,tag))) +
+    scale_x_datetime()+
+    theme(strip.text.y = element_text(angle = 0))+
+    facet_grid(rows = vars(iteration))
+```
+
+Package 0 (arm values)
+
+```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=6}
+  df1=df_control[which(grepl("avgMeasurement-RaplKey \\(PackageID 0",df_control$"variable")),]
+  df2=df_control[which(grepl("avgRef-RaplKey \\(PackageID 0",df_control$"variable")),]
+  df1$tag="measurements"
+  df2$tag="references"
+  df=rbind(df2,df1)
+  df$variable=gsub("avgRef-","",df$variable)
+  df$variable=gsub("avgMeasurement-","",df$variable)
+  df$variable=factor(df$variable)
+  df$value = as.numeric(as.character(df$value))
+
+  ggplot(df) +
+    geom_line(aes(x=time, y=value, linetype=tag, color=variable, group=interaction(variable,tag))) +
+    scale_x_datetime()+
+    theme(strip.text.y = element_text(angle = 0))+
+    facet_grid(rows = vars(iteration))
+```
+
+Package 1 (arm values)
+
+```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=6}
+  df1=df_control[which(grepl("avgMeasurement-RaplKey \\(PackageID 1",df_control$"variable")),]
+  df2=df_control[which(grepl("avgRef-RaplKey \\(PackageID 1",df_control$"variable")),]
+  df1$tag="measurements"
+  df2$tag="references"
+  df=rbind(df2,df1)
+  df$variable=gsub("avgRef-","",df$variable)
+  df$variable=gsub("avgMeasurement-","",df$variable)
+  df$variable=factor(df$variable)
+  df$value = as.numeric(as.character(df$value))
+
+  ggplot(df) +
+    geom_line(aes(x=time, y=value, linetype=tag, color=variable, group=interaction(variable,tag))) +
+    scale_x_datetime()+
+    theme(strip.text.y = element_text(angle = 0))+
+    facet_grid(rows = vars(iteration))
+```
+
+Bandit: Internal parameters  
+```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=8}
+  ggplot(df_control[which(grepl("proba",df_control$"variable")),],
+         aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
     geom_line() +
     scale_x_datetime()+
-    facet_grid(rows = vars(variable),scales="free_y") +
-    geom_hline(yintercept = (1.0/1.1), linetype="dashed", color = "red") +
-    theme(strip.text.y = element_text(angle = 0)) +
-    xlab("t") +
+    theme(strip.text.y = element_text(angle = 0))+
+    facet_grid(rows = vars(iteration),scales="free_y")+
+    ylab("pull probabilities")
 ```
+
+```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=8}
+  ggplot(df_control[which(grepl("cumulativeLoss",df_control$"variable")),],
+         aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
+    geom_line() +
+    scale_x_datetime()+
+    theme(strip.text.y = element_text(angle = 0))+
+    facet_grid(rows = vars(iteration),scales="free_y")+
+    ylab("cumulative losses")
+
+```
+
