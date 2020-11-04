@@ -7,10 +7,10 @@ import random
 import nrm.tooling as nrm
 import experiment
 
-experimentSamplingRange = range(0, 4)
+experimentSamplingRange = range(0, 1)
 # experimentSamplingRange = range(0, 6)
-powerCapRanges = [100, 250]
-admissible = [(250, 250), (100, 100)]
+powerCapRanges = [80, 250]
+admissible = [(250, 250), (80, 80)]
 actionLists = [
     [nrm.Action("RaplKey (PackageID 0)", p0), nrm.Action("RaplKey (PackageID 1)", p1)]
     for p0, p1 in admissible
@@ -34,8 +34,8 @@ staticPower = 200000000
 referenceMeasurementRoundInterval = 20
 
 raplCfg = {
-    "raplActions": [{"microwatts": 1000000 * p} for p in powerCapRanges],
-    "referencePower": {"microwatts": 2500000},
+    "raplActions": [{"microwatts": 1_000_000 * p} for p in powerCapRanges],
+    "referencePower": {"microwatts": 250_000_000},
     "raplPath": "/sys/devices/virtual/powercap/intel-rapl",
 }
 
@@ -47,7 +47,7 @@ for i in experimentSamplingRange:
     #       (i, "pcap" + experiment.ActionsShorthandDescription(actions))] = (
     #         actions,
     #         {
-    #             "controlCfg": {"fixedPower": {"microwatts": 1000000}},
+    #             "controlCfg": "ControlOff",
     #             "raplCfg": raplCfg,
     #             "verbose": "Info",
     #         },
@@ -57,9 +57,9 @@ for i in experimentSamplingRange:
         {
             "controlCfg": {
                 "hint": hintActionList,
-                "learnCfg": {"horizon": 300},
-                "minimumControlInterval": {"microseconds": 10000000},
-                "minimumWaitInterval": {"microseconds": 3000000},
+                "learnCfg": {"horizon": 120},
+                "minimumControlInterval": {"microseconds": 5000000},
+                "minimumWaitInterval": {"microseconds": 1000000},
                 "referenceMeasurementRoundInterval": referenceMeasurementRoundInterval,
                 "speedThreshold": 1.11,
                 "staticPower": {"microwatts": staticPower},
@@ -75,10 +75,11 @@ for i in experimentSamplingRange:
     #             "staticPower": {"microwatts": staticPower},
     #             "referenceMeasurementRoundInterval":
     #               referenceMeasurementRoundInterval,
-    #             "learnCfg": {"random": None},
+    #             "learnCfg": {"seed": 1},
+    #             "minimumWaitInterval": {"microseconds": 3000000},
     #             "speedThreshold": 1.11,
     #             "minimumControlInterval": {"microseconds": 10000000},
-    #             "hint": {"only": hintActionList},
+    #             "hint": hintActionList,
     #         },
     #         "raplCfg": raplCfg,
     #         "verbose": "Debug",
