@@ -7,9 +7,9 @@
 extend: grid5000/from_grid5000_environment/base.yaml
 
 global:
-  nix_version: 2.3.7
+  nix_version: 2.3.8
   nix_variant: x86_64-linux
-  hnrm_version: expe-0.3
+  hnrm_version: expe-0.4
   install_dir: /opt
 
   grid5000_environment_import_name: debian10-x64-min
