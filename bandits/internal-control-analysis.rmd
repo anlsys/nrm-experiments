@@ -2,10 +2,13 @@
 
 ```
 Actuators:
-  - RaplKey (PackageID 0) : Actuator {actions = [DiscreteDouble {getDiscrete = 80.0},DiscreteDouble {getDiscrete = 250.0}]}
-  - RaplKey (PackageID 1) : Actuator {actions = [DiscreteDouble {getDiscrete = 80.0},DiscreteDouble {getDiscrete = 250.0}]}
+  - RaplKey (PackageID 0) : Actuator {actions = [DiscreteDouble {getDiscrete =
+  80.0},DiscreteDouble {getDiscrete = 250.0}]}
+  - RaplKey (PackageID 1) : Actuator {actions = [DiscreteDouble {getDiscrete =
+  80.0},DiscreteDouble {getDiscrete = 250.0}]}
 Sensors:
-  - DownstreamCmdKey (DownstreamCmdID 77456c6d-4693-4d01-b84d-60323e0d2170) : Sensor {range = 0.0 ... 1.79654893561e11, maxFrequency = 1.0}
+  - DownstreamCmdKey (DownstreamCmdID 77456c6d-4693-4d01-b84d-60323e0d2170)
+  : Sensor {range = 0.0 ... 1.79654893561e11, maxFrequency = 1.0}
   - RaplKey (PackageID 0) : Sensor {range = 0.0 ... 150.0, maxFrequency = 1.0}
   - RaplKey (PackageID 1) : Sensor {range = 0.0 ... 150.0, maxFrequency = 1.0}
 Objectives:
@@ -92,11 +95,12 @@ Constraints:
   # print(df_reference)
   runtime_reference = mean(df_reference$runtime)
   throughput_reference = mean(df_reference$instructions)
-  df_post$breach = abs (df_post$runtime - (1.1 * runtime_reference))
+  df_post$breach = abs (df_post$runtime - (-0.9 * runtime_reference))
 
   kable(within(df_post, rm(instructionsSd)),digits=4)
 ```
 
+\newpage 
 
 Average total watt-hour energy expenditure by strategy  
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
@@ -121,23 +125,20 @@ Average throughput by strategy
     geom_hline(yintercept = throughput_reference, linetype="dashed", color = "black")
 ```
 
-```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  ggplot(data=df_post, aes(x=name, y=instructionsSd) ) +
-    geom_boxplot()
-```
-
 Average power by strategy  
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
   ggplot(data=df_post, aes(x=name, y=wh/runtime) ) +
     geom_boxplot()
 ```
 
-# Sensor outputs for static high and low powercap
+\newpage 
+
+### Raw sensor outputs for static high and low powercap  
 
 Package 0:
 
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap80/80"|df$name=="pcap100/250"|df$name=="pcap250/100") & df$variable=="sensor-RaplKey (PackageID 0)" ) ,],
+  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap80/80"|df$name=="pcap100/100") & df$variable=="sensor-RaplKey (PackageID 0)" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
     geom_line() +
@@ -151,7 +152,7 @@ Package 0:
 Package 1:
 
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  ggplot(data=df[which((df$name=="pcap250/250" | df$name=="pcap80/80"|df$name=="pcap100/250" | df$name=="pcap250/100") & df$variable=="sensor-RaplKey (PackageID 1)" ) ,],
+  ggplot(data=df[which((df$name=="pcap250/250" | df$name=="pcap80/80"|df$name=="pcap100/100") & df$variable=="sensor-RaplKey (PackageID 1)" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
     geom_line() +
@@ -164,7 +165,7 @@ Package 1:
 Downstream perf monitoring (after integrator):
 
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap80/80") & df$variable=="sensor-sensor-Downstream" ) ,],
+  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap80/80"|df$name=="pcap100/100") & df$variable=="sensor-sensor-Downstream" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
     geom_line() +
@@ -178,7 +179,7 @@ Downstream perf monitoring (after integrator):
 Downstream perf monitoring (raw, before integrator):
 
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap80/80") & df$variable=="pubPerformance" ) ,],
+  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap80/80"|df$name=="pcap100/100") & df$variable=="pubPerformance" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
     geom_line() +
@@ -189,8 +190,9 @@ Downstream perf monitoring (raw, before integrator):
 
 ```
 
-\newpage 
-# Bandits
+\newpage
+
+# bandit strategy time series data
 
 Meta-Action type  
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=2}
@@ -212,6 +214,12 @@ Sensor measurements
     facet_grid(rows = vars(variable),scales="free_y") +
     xlab("t") +
     ylab("sensor values")
+```
+
+total number of rounds:
+```{r,  echo=FALSE}
+roundcount =length( df_control[which(grepl("objective",df_control$"variable") & df_control$iteration==0),"iteration"] )
+print(roundcount)
 ```
 
 Bandit cost (roundwise, post-normalization via metadata)  
@@ -249,8 +257,32 @@ Arm pulls
     facet_grid(rows = vars(iteration))
 ```
 
+\newpage
+### arm-wise 
+
+average arm-wise observed cost  
+```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+  ggplot(df_control[which(grepl("avgObj",df_control$"variable")),],
+         aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
+    geom_line() +
+    scale_x_datetime()+
+    theme(strip.text.y = element_text(angle = 0))+
+    facet_grid(rows = vars(iteration))
+```
+
+average arm-wise observed constraint  
+```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
+  ggplot(df_control[which(grepl("avgCst",df_control$"variable")),],
+         aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
+    geom_line() +
+    scale_x_datetime()+
+    theme(strip.text.y = element_text(angle = 0))+
+    geom_hline(yintercept = -0.9, linetype="dashed", color = "red") +
+    facet_grid(rows = vars(iteration))
+```
+
 average loss evolution  
-```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=8}
+```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
   # print(unique(df_control["variable"]))
   df_loss = df_control[which(df_control["variable"] == "objective-0"),]
   df_loss$value=as.numeric(as.character(df_loss$value))
@@ -268,8 +300,9 @@ average loss evolution
     ylab("average loss")
 ```
 
+
 average constraint evolution  
-```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=8}
+```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
   # print(unique(df_control["variable"]))
   df_constraint = df_control[which(df_control["variable"] == "constraint-0"),]
   df_constraint$value=as.numeric(as.character(df_constraint$value))
@@ -280,7 +313,7 @@ average constraint evolution
              group=iteration,
              color=iteration))+
     geom_line() +
-    geom_hline(yintercept = 1.1, linetype="dashed", color = "red") +
+    geom_hline(yintercept = -0.9, linetype="dashed", color = "red") +
     scale_x_datetime()+
     facet_grid(rows = vars(variable),scales="free_y") +
     theme(strip.text.y = element_text(angle =0)) +
@@ -288,15 +321,6 @@ average constraint evolution
     ylab("average constraint")
 ```
 
-## Bandit: Average observed objs
-```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=4}
-  ggplot(df_control[which(grepl("avgObj",df_control$"variable")),],
-         aes(x=time, y=as.numeric(as.character(value)), group=variable,color=variable) )+
-    geom_line() +
-    scale_x_datetime()+
-    theme(strip.text.y = element_text(angle = 0))+
-    facet_grid(rows = vars(iteration))
-```
 
 # Randomized strategy : pull counts
 
