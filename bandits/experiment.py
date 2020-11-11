@@ -26,7 +26,7 @@ def perfwrapped(cmd, args):
                     "slice": {"cpus": 1, "mems": 1},
                     "perfwrapper": {
                         "perfLimit": 100000,
-                        "perfFreq": {"hertz": 1},
+                        "perfFreq": {"hertz": 10},
                     },
                 },
                 "name": "perfwrap",
@@ -122,19 +122,12 @@ def do_workload(baseActions, daemonCfg, workloads, actuations=[]):
                             "reportEvaluatedConstraints"
                         ]:
                             print(value)
-                            interval = value[2]["i"]
                             history[
                                 "reportEvaluatedConstraints(threshold)-" + str(counter)
                             ].append((t, value[0]))
                             history[
                                 "reportEvaluatedConstraints(value)-" + str(counter)
                             ].append((t, value[1]))
-                            history[
-                                "reportEvaluatedConstraints(inf)-" + str(counter)
-                            ].append((t, interval[0]))
-                            history[
-                                "reportEvaluatedConstraints(sup)-" + str(counter)
-                            ].append((t, interval[1]))
                             counter = counter + 1
                         counter = 0
                         for value in meta["innerDecision"]["reportEvaluatedObjectives"]:
