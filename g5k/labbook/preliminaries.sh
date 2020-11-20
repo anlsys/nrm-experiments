@@ -12,8 +12,8 @@
 # -----------------------------------------------------------------------------
 #
 # authors: Raphaël Bleuse <raphael.bleuse@inria.fr>
-# date: 2020-11-19
-# version: 0.0
+# date: 2020-11-20
+# version: 0.1
 
 export LC_ALL=C  # ensure we are working with known locales
 set -e -u -f -o pipefail # safer shell script
@@ -39,9 +39,11 @@ declare -r PARAMS_FILE='parameters.yaml'
 
 # files to snapshot before running the experiment
 declare -ra PRERUN_SNAPSHOT_FILES=(
-	# inputs
 	"${PARAMS_FILE}"
-	# system
+)
+
+# pseudo-files from /proc to record
+declare -ra SYSTEM_STATE_SNAPSHOT_FILES=(
 	/proc/cpuinfo
 	/proc/iomem
 	/proc/loadavg
@@ -80,6 +82,28 @@ function dump_parameters {
 }
 
 
+function snapshot_system_state {
+	archive="${1}"
+	subdir="${2}"
+
+	# create unique namespace to work with
+	wd=$(mktemp --directory)
+	mkdir "${wd}/${subdir}"
+
+	# snapshot
+	for pseudofile in "${SYSTEM_STATE_SNAPSHOT_FILES[@]}"; do
+		saveas="$(basename "${pseudofile}")"
+		cat "${pseudofile}" > "${wd}/${subdir}/${saveas}"
+	done
+
+	# archive
+	tar --append --file="${archive}" --directory="${wd}" --transform='s,^,sysstate/,' -- "${subdir}"
+
+	# clean unique namespace
+	rm --recursive --force -- "${wd}"
+}
+
+
 function run {
 	for powercap in "${POWERCAPS[@]}"; do
 		timestamp="$(date --iso-8601=seconds)"
@@ -88,15 +112,20 @@ function run {
 		# record run parameters
 		dump_parameters "${timestamp}" "${BENCHMARK}" "${powercap}" "--iterationCount=${ITERATION_COUNT} --problemSize=${PROBLEM_SIZE}"
 
+		# create empty archive
+		tar --create --file="${archive}" --files-from=/dev/null
+
 		# snapshot pre-run state
-		tar --create --file="${archive}" --directory="${LOGDIR}" "${PRERUN_SNAPSHOT_FILES[@]}"
+		tar --append --file="${archive}" --directory="${LOGDIR}" -- "${PRERUN_SNAPSHOT_FILES[@]}"
+		snapshot_system_state "${archive}" 'pre'
 
 		# run benchmark
 		/opt/xplaunch static-gain --powercap="${powercap}" -- \
 			"${BENCHMARK}" --iterationCount="${ITERATION_COUNT}" --problemSize="${PROBLEM_SIZE}"
 
-		# retrieve benchmark logs
-		tar --append --file="${archive}" --directory="${LOGDIR}" "${POSTRUN_SNAPSHOT_FILES[@]}"
+		# retrieve benchmark logs and snapshot post-run state
+		tar --append --file="${archive}" --directory="${LOGDIR}" -- "${POSTRUN_SNAPSHOT_FILES[@]}"
+		snapshot_system_state "${archive}" 'post'
 
 		# compress archive
 		xz --compress "${archive}"
