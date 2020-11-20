@@ -35,11 +35,13 @@ declare -r LOGDIR='/tmp'  # all relative paths are relative to $LOGDIR
 declare -r DATADIR='/tmp/experiments-data'
 
 declare -r PARAMS_FILE='parameters.yaml'
+declare -r TOPOLOGY_FILE='topology.xml'
 
 
 # files to snapshot before running the experiment
 declare -ra PRERUN_SNAPSHOT_FILES=(
 	"${PARAMS_FILE}"
+	"${TOPOLOGY_FILE}"
 )
 
 # pseudo-files from /proc to record
@@ -111,6 +113,9 @@ function run {
 
 		# record run parameters
 		dump_parameters "${timestamp}" "${BENCHMARK}" "${powercap}" "--iterationCount=${ITERATION_COUNT} --problemSize=${PROBLEM_SIZE}"
+
+		# record machine topology
+		lstopo --output-format xml --whole-system --force "${LOGDIR}/${TOPOLOGY_FILE}"
 
 		# create empty archive
 		tar --create --file="${archive}" --files-from=/dev/null

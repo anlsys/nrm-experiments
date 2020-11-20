@@ -9,7 +9,7 @@
 
 - install_dependencies:
   - exec_in: apt-get update --yes
-  - exec_in: apt-get install --yes --no-install-recommends python3-cerberus python3-ruamel.yaml
+  - exec_in: apt-get install --yes --no-install-recommends python3-cerberus python3-ruamel.yaml hwloc-nox
 
 - create_runner_user:
   - exec_in: useradd --system --no-user-group --groups nix-users --create-home $${xplaunch_user}
