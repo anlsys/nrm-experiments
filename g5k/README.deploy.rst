@@ -150,17 +150,61 @@ Copy the URL with the localhost IP (i.e., http://127.0.0.1:8888/?token=9c1d649dd
 Static gain experiment
 ----------------------
 
-The general form of the command is :samp:`/opt/xplaunch static-gain --powercap={pcap} -- {cmd}`
-
-.. code-block:: console
-
-   $ ssh root@dahu-32 /opt/xplaunch static-gain --powercap=150 -- stream_c -n 16000 -s 1000000
-
-
 Supported benchmarks
   - Algebraic multigrid benchmark (AMG): `amg`
   - NAS Parallel Benchmarks, EP: `ep.A.x`, `ep.B.x`, `ep.C.x`, `ep.D.x`, `ep.E.x`
   - STREAM benchmark: `stream_c`
+
+
+Wrapped command
+^^^^^^^^^^^^^^^
+
+The general form of the command is :samp:`/opt/xplaunch static-gain --powercap={pcap} -- {cmd}`
+
+.. code-block:: console
+
+   $ ssh root@dahu-32 /opt/xplaunch static-gain --powercap=150 -- stream_c -n 10_000 -s 33_554_432
+
+
+Manual launch
+^^^^^^^^^^^^^
+
+If required, the commands may be manually launched.
+
+The commands may be launched in their own nix environment, without nrm.
+If this is the case (e.g., to test the compilation result) a single nix shell is required.
+
+If the command is to be launched with nrm, then two nix shells are required: a
+shell for the daemon, and a shell for the client.
+
+The shell is started with the following command:
+
+.. code:: console
+
+   nix-shell \
+        --pure \
+        --arg hnrmHome <path/to/nrm> \
+        --argstr iterationCount 10000 \
+        --argstr problemSize 33554432 \
+        <path/to/nix-shell/definition>
+
+
+If the benchmark requires libnrm instrumentation, the support is activated in
+the nix-shell with `--arg nrmSupport true`.
+
+
+The daemon is launched with:
+
+.. code:: console
+
+   nrmd -i -y <<< '{"raplCfg":{"raplActions":[{"microwatts":100000000}]},"verbose":"Info"}'
+
+
+The application is launched with:
+
+.. code:: console
+
+   nrm run -i -y <<< '{"app":{"instrumentation":{"ratelimit":{"hertz":1000000}}}}' stream_c
 
 
 .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. .. ..

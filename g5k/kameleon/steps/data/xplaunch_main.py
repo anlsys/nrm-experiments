@@ -198,13 +198,14 @@ The benchmark parsing functions build the configuration out of the supplied
 command line.
 """
 
-def default_benchmark_parser(cmd, nixshell):
+def default_benchmark_parser(cmd, nixshell, enable_libnrm=False):
     """Dummy benchmark parser forwarding cmd as is."""
     assert isinstance(cmd, (list, tuple))
+    assert isinstance(enable_libnrm, bool)
     benchmark_conf = {
         'nixshell': pathlib.Path(nixshell),
         'cmd': cmd,
-        'nixargs': (),
+        'nixargs': ('--arg', 'nrmSupport', 'true') if enable_libnrm else (),
     }
     return benchmark_conf
 
@@ -239,6 +240,7 @@ def stream_benchmark_parser(cmd):
         'nixshell': pathlib.Path('stream.nix'),
         'cmd': (cmd[0], *other_args),
         'nixargs': (
+            '--arg', 'nrmSupport', 'true',
             '--argstr', 'iterationCount', str(nixargs.niter),
             '--argstr', 'problemSize', str(nixargs.psize),
         ),
@@ -251,7 +253,7 @@ def parse_benchmark_command(cmd):
         # STREAM benchmark
         'stream_c': stream_benchmark_parser,
         # Algebraic multigrid benchmark (AMG)
-        'amg': functools.partial(default_benchmark_parser, nixshell='amg.nix'),
+        'amg': functools.partial(default_benchmark_parser, nixshell='amg.nix', enable_libnrm=True),
         # NAS Parallel Benchmarks
         'ep.A.x': functools.partial(default_benchmark_parser, nixshell='nas.nix'),
         'ep.B.x': functools.partial(default_benchmark_parser, nixshell='nas.nix'),

@@ -7,10 +7,10 @@ import random
 import nrm.tooling as nrm
 import experiment
 
-experimentSamplingRange = range(0, 1)
+experimentSamplingRange = range(0, 2)
 # experimentSamplingRange = range(0, 6)
-powerCapRanges = [80, 250]
-admissible = [(250, 250), (80, 80)]
+powerCapRanges = [80,100, 250]
+admissible = [(250, 250),(100,100), (80, 80)]
 actionLists = [
     [nrm.Action("RaplKey (PackageID 0)", p0), nrm.Action("RaplKey (PackageID 1)", p1)]
     for p0, p1 in admissible
@@ -42,30 +42,31 @@ raplCfg = {
 daemonCfgs = {}
 
 for i in experimentSamplingRange:
-    # for actions in actionLists:
-    #     daemonCfgs[
-    #       (i, "pcap" + experiment.ActionsShorthandDescription(actions))] = (
-    #         actions,
-    #         {
-    #             "controlCfg": "ControlOff",
-    #             "raplCfg": raplCfg,
-    #             "verbose": "Info",
-    #         },
-    #     )
+    for actions in actionLists:
+        daemonCfgs[
+          (i, "pcap" + experiment.ActionsShorthandDescription(actions))] = (
+            actions,
+            {
+                "controlCfg": "ControlOff",
+                "raplCfg": raplCfg,
+                "verbose": "Info",
+            },
+        )
     daemonCfgs[(i, "controlOn")] = (
         None,
         {
             "controlCfg": {
                 "hint": hintActionList,
                 "learnCfg": {"horizon": 120},
-                "minimumControlInterval": {"microseconds": 5000000},
-                "minimumWaitInterval": {"microseconds": 1000000},
+                "minimumControlInterval": {"microseconds": 500_000},
+                "minimumWaitInterval": {"microseconds": 500_000},
                 "referenceMeasurementRoundInterval": referenceMeasurementRoundInterval,
-                "speedThreshold": 1.10,
+                "speedThreshold": 0.9,
                 "staticPower": {"microwatts": staticPower},
             },
             "raplCfg": raplCfg,
             "verbose": "Info",
+            "passiveSensorFrequency": {"hertz": 10},
         },
     )
     # daemonCfgs[(i, "randomUniform")] = (
@@ -87,9 +88,10 @@ for i in experimentSamplingRange:
     # )
 
 
-stream = experiment.perfwrapped("stream_c", [])
+stream = experiment.perfwrapped("nice", ["-n", "16", "./streamtwice.sh"])
 
-nas = experiment.perfwrapped("nice", ["-n", "16", "ep.D.x"])
+nas = experiment.perfwrapped("nice", ["-n", "16", "./eptwice.sh"])
+# nas = experiment.perfwrapped("nice", ["-n", "16", "ep.D.x"])
 
 lammps = experiment.perfwrapped(
     "mpiexec",
@@ -107,6 +109,7 @@ print(keys)
 for key in keys:
     baseActions, cfg = daemonCfgs[key]
     print(cfg)
+    # results[key] = experiment.do_workload(baseActions, cfg, stream)
     results[key] = experiment.do_workload(baseActions, cfg, nas)
 
 import pickle
