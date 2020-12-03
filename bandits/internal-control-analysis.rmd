@@ -257,7 +257,6 @@ Arm pulls
     facet_grid(rows = vars(iteration))
 ```
 
-\newpage
 ### arm-wise 
 
 average arm-wise observed cost  
@@ -321,7 +320,68 @@ average constraint evolution
     ylab("average constraint")
 ```
 
+\newpage
+## meta-control sensor rolling stats
 
+Throughputs (arm values)
+
+```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=4}
+  df1=df_control[which(grepl("avgMeasurement-Downstream",df_control$"variable")),]
+  df2=df_control[which(grepl("avgRef-Downstream",df_control$"variable")),]
+  df1$tag="measurements"
+  df2$tag="references"
+  df=rbind(df2,df1)
+  df$variable=gsub("avgRef-","",df$variable)
+  df$variable=gsub("avgMeasurement-","",df$variable)
+  df$variable=factor(df$variable)
+  df$value = as.numeric(as.character(df$value))
+
+  ggplot(df) +
+    geom_line(aes(x=time, y=value, linetype=tag, color=variable, group=interaction(variable,tag))) +
+    scale_x_datetime()+
+    theme(strip.text.y = element_text(angle = 0))+
+    facet_grid(rows = vars(iteration))
+```
+
+Package 0 (arm values)
+
+```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=4}
+  df1=df_control[which(grepl("avgMeasurement-RaplKey \\(PackageID 0",df_control$"variable")),]
+  df2=df_control[which(grepl("avgRef-RaplKey \\(PackageID 0",df_control$"variable")),]
+  df1$tag="measurements"
+  df2$tag="references"
+  df=rbind(df2,df1)
+  df$variable=gsub("avgRef-","",df$variable)
+  df$variable=gsub("avgMeasurement-","",df$variable)
+  df$variable=factor(df$variable)
+  df$value = as.numeric(as.character(df$value))
+
+  ggplot(df) +
+    geom_line(aes(x=time, y=value, linetype=tag, color=variable, group=interaction(variable,tag))) +
+    scale_x_datetime()+
+    theme(strip.text.y = element_text(angle = 0))+
+    facet_grid(rows = vars(iteration))
+```
+
+Package 1 (arm values)
+
+```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=4}
+  df1=df_control[which(grepl("avgMeasurement-RaplKey \\(PackageID 1",df_control$"variable")),]
+  df2=df_control[which(grepl("avgRef-RaplKey \\(PackageID 1",df_control$"variable")),]
+  df1$tag="measurements"
+  df2$tag="references"
+  df=rbind(df2,df1)
+  df$variable=gsub("avgRef-","",df$variable)
+  df$variable=gsub("avgMeasurement-","",df$variable)
+  df$variable=factor(df$variable)
+  df$value = as.numeric(as.character(df$value))
+
+  ggplot(df) +
+    geom_line(aes(x=time, y=value, linetype=tag, color=variable, group=interaction(variable,tag))) +
+    scale_x_datetime()+
+    theme(strip.text.y = element_text(angle = 0))+
+    facet_grid(rows = vars(iteration))
+```
 # Randomized strategy : pull counts
 
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
@@ -373,67 +433,7 @@ average constraint evolution
     ylab("hco")
 ```
 
-## meta-control statistics on sensors
 
-Throughputs (arm values)
-
-```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=6}
-  df1=df_control[which(grepl("avgMeasurement-Downstream",df_control$"variable")),]
-  df2=df_control[which(grepl("avgRef-Downstream",df_control$"variable")),]
-  df1$tag="measurements"
-  df2$tag="references"
-  df=rbind(df2,df1)
-  df$variable=gsub("avgRef-","",df$variable)
-  df$variable=gsub("avgMeasurement-","",df$variable)
-  df$variable=factor(df$variable)
-  df$value = as.numeric(as.character(df$value))
-
-  ggplot(df) +
-    geom_line(aes(x=time, y=value, linetype=tag, color=variable, group=interaction(variable,tag))) +
-    scale_x_datetime()+
-    theme(strip.text.y = element_text(angle = 0))+
-    facet_grid(rows = vars(iteration))
-```
-
-Package 0 (arm values)
-
-```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=6}
-  df1=df_control[which(grepl("avgMeasurement-RaplKey \\(PackageID 0",df_control$"variable")),]
-  df2=df_control[which(grepl("avgRef-RaplKey \\(PackageID 0",df_control$"variable")),]
-  df1$tag="measurements"
-  df2$tag="references"
-  df=rbind(df2,df1)
-  df$variable=gsub("avgRef-","",df$variable)
-  df$variable=gsub("avgMeasurement-","",df$variable)
-  df$variable=factor(df$variable)
-  df$value = as.numeric(as.character(df$value))
-
-  ggplot(df) +
-    geom_line(aes(x=time, y=value, linetype=tag, color=variable, group=interaction(variable,tag))) +
-    scale_x_datetime()+
-    theme(strip.text.y = element_text(angle = 0))+
-    facet_grid(rows = vars(iteration))
-```
-
-Package 1 (arm values)
-
-```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=6}
-  df1=df_control[which(grepl("avgMeasurement-RaplKey \\(PackageID 1",df_control$"variable")),]
-  df2=df_control[which(grepl("avgRef-RaplKey \\(PackageID 1",df_control$"variable")),]
-  df1$tag="measurements"
-  df2$tag="references"
-  df=rbind(df2,df1)
-  df$variable=gsub("avgRef-","",df$variable)
-  df$variable=gsub("avgMeasurement-","",df$variable)
-  df$variable=factor(df$variable)
-  df$value = as.numeric(as.character(df$value))
-
-  ggplot(df) +
-    geom_line(aes(x=time, y=value, linetype=tag, color=variable, group=interaction(variable,tag))) +
-    scale_x_datetime()+
-    theme(strip.text.y = element_text(angle = 0))+
-    facet_grid(rows = vars(iteration))
-```
 
 Bandit: Internal parameters  
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=8}
