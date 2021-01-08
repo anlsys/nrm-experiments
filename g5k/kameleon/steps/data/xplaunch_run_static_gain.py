@@ -2,21 +2,140 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import asyncio
+import collections
+import concurrent.futures
 import contextlib
 import csv
-import sys
+import pathlib
 import time
+import typing
 import uuid
+
+import cerberus
+import ruamel.yaml
 
 import nrm.tooling as nrm
 
 
-CPD_SENSORS_MAXTRY = 5  # maximum number of tries to get extra sensors definitions
+# maximum number of tries to get extra sensors definitions
+CPD_SENSORS_MAXTRY = 5
 
+# maximum time (in second) to wait for a metric read (daemon.upstream_recv)
+METRIC_COLLECTION_TIMEOUT = 0.1
+
+
+# XXX: modularize by reading the xpctl_conf file
 LIBNRM_INSTRUMENTED_BENCHMARKS = {  # benchmark requiring libnrm instrumentation
     'stream_c',
     'amg'
 }
+
+
+# experiment plan validation/load  ############################################
+
+XP_PLAN_VERSION = 1  # current version of experiment plan format
+
+XP_PLAN_ACTION_SUBSCHEMAS = {
+    'set_rapl_powercap': {
+        'items': (
+            {
+                'type': 'float',
+                'min': 0,
+            },
+        ),
+    },
+}
+
+XP_PLAN_SCHEMA = {
+    'version': {
+        'type': 'integer',
+        'min': 1,
+        'required': True,
+    },
+    'actions': {
+        'type': 'list',
+        'required': True,
+        'empty': True,
+        'schema': {
+            'type': 'dict',
+            'allow_unknown': True,
+            'oneof_schema': tuple(
+                {
+                    'time': {
+                        'type': 'float',
+                        'min': 0,
+                        'required': True,
+                    },
+                    'action': {
+                        'allowed': (
+                            action,
+                        ),
+                        'required': True,
+                    },
+                    'args': {
+                        'type': 'list',
+                        'required': True,
+                        **args_schema
+                    },
+                }
+                for action, args_schema in XP_PLAN_ACTION_SUBSCHEMAS.items()
+            )
+        },
+    },
+}
+
+
+class PowercapAction(typing.NamedTuple):
+    time: float
+    powercap: float
+
+    @classmethod
+    def from_action(cls, action):
+        return cls(time=action['time'], powercap=action['args'][0])
+
+
+XP_PLAN_ACTION_CTORS = {
+    'set_rapl_powercap': PowercapAction.from_action,
+}
+assert set(XP_PLAN_ACTION_SUBSCHEMAS).issubset(XP_PLAN_ACTION_CTORS)
+
+
+def read_experiment_plan(filepath):
+    yaml_parser = ruamel.yaml.YAML(typ='safe', pure=True)
+    raw_config = yaml_parser.load(pathlib.Path(filepath))
+
+    # check experiment plan follows the defined schema
+    validator = cerberus.Validator(schema=XP_PLAN_SCHEMA)
+    config = validator.validated(raw_config)
+
+    if config is None:
+        raise argparse.ArgumentTypeError('bogus experiment plan')
+
+    if config['version'] != XP_PLAN_VERSION:
+        raise argparse.ArgumentTypeError(
+            f'invalid version of experiment plan format, expected version {XP_PLAN_VERSION}'
+        )
+
+    # structure experiment plan data structure
+    plan = collections.defaultdict(list)
+    for action in config['actions']:
+        plan[action['action']].append(
+            XP_PLAN_ACTION_CTORS[action['action']](action)
+        )
+
+    # check there are no conflicting actions at a given time
+    _sentinel = object
+    for action, events in plan.items():
+        already_defined_times = set()
+        for event in events:
+            if event.time in already_defined_times:
+                raise argparse.ArgumentTypeError(
+                    f'conflicting "{action}" actions at time {event.time}'
+                )
+            already_defined_times.add(event.time)
+
+    return dict(plan)
 
 
 # CSV export  #################################################################
@@ -94,6 +213,7 @@ def pubProgress_extractor(msg_id, payload):
         'sensor.value': value,
     }
 
+
 def noop_extractor(*_):
     yield from ()
 
@@ -115,27 +235,16 @@ def dump_upstream_msg(csvwriters, msg):
 
 
 # helper functions  ###########################################################
+TEST = open('/tmp/test.log', 'a+')  # XXX
+START=time.time()  # XXX
 
-def noop(*args, **kwargs):
-    pass
-
-
-def enforce_powercap(daemon, powercap):
-    # this relies only on the configuration of the daemon, so we do not need to
-    # wait for the application to start
-    cpd = daemon.get_cpd()
-    import pprint; pprint.pprint(vars(cpd), stream=sys.stderr)  # XXX: logs
-
-    # get all RAPL actuator (XXX: should filter on tag rather than name)
-    import pprint; pprint.pprint(cpd.actuators())
-    rapl_actuators = filter(lambda a: a.actuatorID.startswith('RaplKey'), cpd.actuators())
-
-    # for each RAPL actuator, create an action that sets the powercap to powercap
-    set_pcap_actions = [nrm.Action(actuator[0], powercap) for actuator in rapl_actuators]
-    import pprint; pprint.pprint(set_pcap_actions, stream=sys.stderr)  # XXX: logs
-
-    daemon.actuate(set_pcap_actions)
-
+# usage of asyncio:
+#
+# asyncio is used to interleave interactions with NRM daemon (namely request
+# and listen actions).
+# Using asyncio does not bring any parallelism: it is a convenient way to
+# schedule actions according to the experiment plan.
+# The daemon object is not protected by any lock: this might be buggy.
 
 def update_sensors_list(daemon, known_sensors, *, maxtry=CPD_SENSORS_MAXTRY, sleep_duration=0.5):
     """Update in place the list known_sensors, returns the new sensors."""
@@ -152,19 +261,117 @@ def update_sensors_list(daemon, known_sensors, *, maxtry=CPD_SENSORS_MAXTRY, sle
             break  # new sensors have been retrieved
         time.sleep(sleep_duration)
 
-    known_sensors.extend(new_sensors)
+    known_sensors.extend(new_sensors)  # extend known_sensors in place
     return new_sensors
 
 
-def launch_application(daemon_cfg, workload_cfg, *, setup=noop, teardown=noop, sleep_duration=0.5):
+def enforce_powercap(daemon, rapl_actuators, powercap):
+    # for each RAPL actuator, create an action that sets the powercap to powercap
+    set_pcap_actions = [
+        nrm.Action(actuator.actuatorID, powercap)
+        for actuator in rapl_actuators
+    ]
+
+    print(f'[{time.time()-START}] enforcing powercap to {powercap}', file=TEST, flush=True)  # XXX: logs
+    daemon.actuate(set_pcap_actions)
+
+
+def collect_rapl_actuators(daemon):
+    # the configuration of RAPL actuators solely depends on the daemon: there
+    # is no need to wait for the application to start
+    cpd = daemon.get_cpd()
+
+    # get all RAPL actuator (XXX: should filter on tag rather than name)
+    rapl_actuators = filter(
+        lambda a: a.actuatorID.startswith('RaplKey'),
+        cpd.actuators()
+    )
+
+    return list(rapl_actuators)
+
+
+async def update_powercap(daemon, rapl_actuators, delay, powercap):
+    await asyncio.sleep(delay)
+    enforce_powercap(daemon, rapl_actuators, powercap)
+    print(f'[{time.time()-START}] powercap updated to {powercap}', file=TEST, flush=True)  # XXX: logs
+
+
+async def execute_experiment_plan(plan, daemon, rapl_actuators):
+    rapl_actions = (
+        update_powercap(daemon, rapl_actuators, delay, powercap)
+        for delay, powercap in plan['set_rapl_powercap']
+    )
+    await asyncio.gather(*rapl_actions)
+
+
+async def collect_metrics(daemon, csvwriters):
+    loop = asyncio.get_running_loop()
+    with concurrent.futures.ThreadPoolExecutor() as pool:
+        while not daemon.all_finished():
+            try:
+                msg = await asyncio.wait_for(
+                    loop.run_in_executor(pool, daemon.upstream_recv),
+                    timeout=METRIC_COLLECTION_TIMEOUT
+                )
+                dump_upstream_msg(csvwriters, msg)
+            except asyncio.TimeoutError:
+                print(f'[{time.time()-START}] metric collection timed out', file=TEST, flush=True)  # XXX: logs
+
+    # use `to_thread` with Python 3.9+
+    # while not daemon.all_finished():
+    #     try:
+    #         msg = await asyncio.wait_for(
+    #             asyncio.to_thread(daemon.upstream_recv)
+    #             timeout=5
+    #         )
+    #         dump_upstream_msg(csvwriters, msg)
+    #     except asyncio.TimeoutError:
+    #         pass  # treat timeout
+
+
+async def do_daemon_ios(plan, daemon, rapl_actuators, csvwriters):
+    read_tasks = asyncio.create_task(
+        # mandatory task as we want to collect metrics as long as the
+        # application is running
+        collect_metrics(daemon, csvwriters),
+        # name='read'
+    )
+    write_tasks = asyncio.create_task(
+        # optional task as it is pointless to change the powercap once the
+        # application finished its execution
+        execute_experiment_plan(plan, daemon, rapl_actuators),
+        # name='write'
+    )
+
+    # - mandatory_tasks is the set of all tasks we *do* want to wait for
+    # - optional_tasks is the set of tasks that may be cancelled once all tasks
+    #   in mandatory_tasks have finished
+    mandatory_tasks = {read_tasks}
+    optional_tasks = {write_tasks}
+
+    # wait until all tasks of mandatory_tasks have finished
+    alldone, pending = set(), optional_tasks | mandatory_tasks
+    while not alldone.issuperset(mandatory_tasks):
+        done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+        alldone |= done
+
+    # cancel remaining tasks of optional_tasks
+    for task in pending:
+        task.cancel()
+
+
+async def launch_application(plan, daemon_cfg, workload_cfg, *, sleep_duration=0.5):
     with nrm.nrmd(daemon_cfg) as daemon:
-        # extra daemon configuration before starting workload
-        setup(daemon)
+        # collect RAPL actuators
+        rapl_actuators = collect_rapl_actuators(daemon)
 
         # collect workload-independent sensors (e.g., RAPL)
         sensors = daemon.get_cpd().sensors()
 
+        # XXX: trigger actions with time == 0
+
         # launch workload
+        print(f'[{time.time()-START}] launch workload', file=TEST, flush=True)  # XXX: logs
         daemon.run(**workload_cfg)
 
         # retrieve definition of extra sensors if required
@@ -173,6 +380,8 @@ def launch_application(daemon_cfg, workload_cfg, *, setup=noop, teardown=noop, s
             if not libnrm_sensors:
                 raise RuntimeError('Unable to get application sensors')
 
+            print(f'[{time.time()-START}] got application-specific sensors', file=TEST, flush=True)  # XXX: logs
+
         # dump sensors values while waiting for the end of the execution
         with contextlib.ExitStack() as stack:
             # each message type is dumped into its own csv file
@@ -180,34 +389,19 @@ def launch_application(daemon_cfg, workload_cfg, *, setup=noop, teardown=noop, s
             # we combine all open context managers thanks to an ExitStack
             csvwriters = initialize_csvwriters(stack)
 
-            while not daemon.all_finished():
-                msg = daemon.upstream_recv()
-                dump_upstream_msg(csvwriters, msg)
-
-        # extra work once the workload execution is over
-        teardown(daemon)
+            await do_daemon_ios(plan, daemon, rapl_actuators, csvwriters)
 
 
 # main script  ################################################################
 
 def cli(args=None):
 
-    def _powercap(string):
-        try:
-            pcap = int(string)
-        except ValueError as err:
-            msg = f'unable to parse as an integer: "{string}"'
-            raise argparse.ArgumentTypeError(msg) from err
-        if pcap <= 0:
-            msg = f'invalid powercap: "{pcap}"'
-            raise argparse.ArgumentTypeError(msg)
-        return pcap
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        'powercap',
-        type=_powercap,
-        help='RAPL maximum power (in watts)',
+        'plan',
+        type=read_experiment_plan,
+        metavar='plan-filepath',
+        help='Path of experiment plan.',
     )
 
     options, cmd = parser.parse_known_args(args)
@@ -215,16 +409,22 @@ def cli(args=None):
 
 
 def run(options, cmd):
-    # daemon configuration (static gain analysis: single powercap value)
+    # daemon configuration
     daemon_cfg = {
         'raplCfg': {
             'raplActions': [
-                {'microwatts': 1_000_000 * options.powercap},
+                {'microwatts': 1_000_000 * powercap}
+                for powercap in set(
+                    action.powercap
+                    for action in options.plan['set_rapl_powercap']
+                )
             ],
         },
         # 'verbose': 'Debug',
-        'verbose': 'Info',
+        # 'verbose': 'Info',
+        'verbose': 'Error',
     }
+    print(f'[{time.time()-START}] daemon_cfg: {daemon_cfg}', file=TEST, flush=True)  # XXX: logs
 
     # workload configuration (i.e., app description + manifest)
     workload_cfg = {
@@ -246,7 +446,7 @@ def run(options, cmd):
     # Uncomment the lines below to wrap the call:
     # workload_cfg.update(
     #     cmd='sh',
-    #     args=['-c', ' '.join(cmd + ['>/tmp/stdout', '2>/tmp/stderr'])],
+    #     args=['-c', ' '.join(cmd), '>/tmp/stdout', '2>/tmp/stderr'],
     # )
 
     # configure libnrm instrumentation if required
@@ -255,10 +455,12 @@ def run(options, cmd):
             'ratelimit': {'hertz': 1_000_000},
         }
 
-    launch_application(
-        daemon_cfg,
-        workload_cfg,
-        setup=lambda daemon: enforce_powercap(daemon, options.powercap),
+    asyncio.run(
+        launch_application(
+            options.plan,
+            daemon_cfg,
+            workload_cfg,
+        )
     )
 
 
