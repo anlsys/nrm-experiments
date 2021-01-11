@@ -7,6 +7,8 @@ import collections
 import concurrent.futures
 import contextlib
 import csv
+import logging
+import logging.config
 import pathlib
 import time
 import typing
@@ -30,6 +32,46 @@ LIBNRM_INSTRUMENTED_BENCHMARKS = {  # benchmark requiring libnrm instrumentation
     'stream_c',
     'amg'
 }
+
+
+# logging configuration  ######################################################
+
+LOGGER_NAME = 'identification-runner'
+
+LOGS_LEVEL = 'INFO'
+
+LOGS_CONF = {
+    'version': 1,
+    'formatters': {
+        'precise': {
+            # timestamp is epoch in seconds
+            'format': '{created}\u0000{levelname}\u0000{process}\u0000{funcName}\u0000{message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': f'/tmp/{LOGGER_NAME}.log',
+            'mode': 'w',
+            'level': LOGS_LEVEL,
+            'formatter': 'precise',
+            'filters': [],
+        },
+    },
+    'loggers': {
+        LOGGER_NAME: {
+            'level': LOGS_LEVEL,
+            'handlers': [
+                'file',
+            ],
+        },
+    },
+}
+
+logging.config.dictConfig(LOGS_CONF)
+
+logger = logging.getLogger(LOGGER_NAME)
 
 
 # experiment plan validation/load  ############################################
@@ -235,8 +277,6 @@ def dump_upstream_msg(csvwriters, msg):
 
 
 # helper functions  ###########################################################
-TEST = open('/tmp/test.log', 'a+')  # XXX
-START=time.time()  # XXX
 
 # usage of asyncio:
 #
@@ -272,7 +312,7 @@ def enforce_powercap(daemon, rapl_actuators, powercap):
         for actuator in rapl_actuators
     ]
 
-    print(f'[{time.time()-START}] enforcing powercap to {powercap}', file=TEST, flush=True)  # XXX: logs
+    logger.info(f'set_pcap={powercap}')
     daemon.actuate(set_pcap_actions)
 
 
@@ -282,18 +322,19 @@ def collect_rapl_actuators(daemon):
     cpd = daemon.get_cpd()
 
     # get all RAPL actuator (XXX: should filter on tag rather than name)
-    rapl_actuators = filter(
-        lambda a: a.actuatorID.startswith('RaplKey'),
-        cpd.actuators()
+    rapl_actuators = list(
+        filter(
+            lambda a: a.actuatorID.startswith('RaplKey'),
+            cpd.actuators()
+        )
     )
-
-    return list(rapl_actuators)
+    logger.info(f'rapl_actuators={rapl_actuators}')
+    return rapl_actuators
 
 
 async def update_powercap(daemon, rapl_actuators, delay, powercap):
     await asyncio.sleep(delay)
     enforce_powercap(daemon, rapl_actuators, powercap)
-    print(f'[{time.time()-START}] powercap updated to {powercap}', file=TEST, flush=True)  # XXX: logs
 
 
 async def execute_experiment_plan(plan, daemon, rapl_actuators):
@@ -315,14 +356,14 @@ async def collect_metrics(daemon, csvwriters):
                 )
                 dump_upstream_msg(csvwriters, msg)
             except asyncio.TimeoutError:
-                print(f'[{time.time()-START}] metric collection timed out', file=TEST, flush=True)  # XXX: logs
+                logger.error('metric collection timeout')
 
     # use `to_thread` with Python 3.9+
     # while not daemon.all_finished():
     #     try:
     #         msg = await asyncio.wait_for(
     #             asyncio.to_thread(daemon.upstream_recv)
-    #             timeout=5
+    #             timeout=METRIC_COLLECTION_TIMEOUT
     #         )
     #         dump_upstream_msg(csvwriters, msg)
     #     except asyncio.TimeoutError:
@@ -330,13 +371,13 @@ async def collect_metrics(daemon, csvwriters):
 
 
 async def do_daemon_ios(plan, daemon, rapl_actuators, csvwriters):
-    read_tasks = asyncio.create_task(
+    metric_collection_task = asyncio.create_task(
         # mandatory task as we want to collect metrics as long as the
         # application is running
         collect_metrics(daemon, csvwriters),
         # name='read'
     )
-    write_tasks = asyncio.create_task(
+    experiment_plan_task = asyncio.create_task(
         # optional task as it is pointless to change the powercap once the
         # application finished its execution
         execute_experiment_plan(plan, daemon, rapl_actuators),
@@ -346,8 +387,8 @@ async def do_daemon_ios(plan, daemon, rapl_actuators, csvwriters):
     # - mandatory_tasks is the set of all tasks we *do* want to wait for
     # - optional_tasks is the set of tasks that may be cancelled once all tasks
     #   in mandatory_tasks have finished
-    mandatory_tasks = {read_tasks}
-    optional_tasks = {write_tasks}
+    mandatory_tasks = {metric_collection_task}
+    optional_tasks = {experiment_plan_task}
 
     # wait until all tasks of mandatory_tasks have finished
     alldone, pending = set(), optional_tasks | mandatory_tasks
@@ -359,6 +400,9 @@ async def do_daemon_ios(plan, daemon, rapl_actuators, csvwriters):
     for task in pending:
         task.cancel()
 
+    if experiment_plan_task in pending:
+        logger.warning('experiment plan partially executed')
+
 
 async def launch_application(plan, daemon_cfg, workload_cfg, *, sleep_duration=0.5):
     with nrm.nrmd(daemon_cfg) as daemon:
@@ -367,20 +411,21 @@ async def launch_application(plan, daemon_cfg, workload_cfg, *, sleep_duration=0
 
         # collect workload-independent sensors (e.g., RAPL)
         sensors = daemon.get_cpd().sensors()
+        logger.info(f'daemon_sensors={sensors}')
 
         # XXX: trigger actions with time == 0
 
         # launch workload
-        print(f'[{time.time()-START}] launch workload', file=TEST, flush=True)  # XXX: logs
+        logger.info('launch workload')
         daemon.run(**workload_cfg)
 
         # retrieve definition of extra sensors if required
         if workload_cfg['cmd'] in LIBNRM_INSTRUMENTED_BENCHMARKS:
-            libnrm_sensors = update_sensors_list(daemon, sensors, sleep_duration=sleep_duration)
-            if not libnrm_sensors:
-                raise RuntimeError('Unable to get application sensors')
-
-            print(f'[{time.time()-START}] got application-specific sensors', file=TEST, flush=True)  # XXX: logs
+            app_sensors = update_sensors_list(daemon, sensors, sleep_duration=sleep_duration)
+            if not app_sensors:
+                logger.critical('failed to get application-specific sensors')
+                raise RuntimeError('Unable to get application-specific sensors')
+            logger.info(f'app_sensors={app_sensors}')
 
         # dump sensors values while waiting for the end of the execution
         with contextlib.ExitStack() as stack:
@@ -424,7 +469,6 @@ def run(options, cmd):
         # 'verbose': 'Info',
         'verbose': 'Error',
     }
-    print(f'[{time.time()-START}] daemon_cfg: {daemon_cfg}', file=TEST, flush=True)  # XXX: logs
 
     # workload configuration (i.e., app description + manifest)
     workload_cfg = {
@@ -455,6 +499,8 @@ def run(options, cmd):
             'ratelimit': {'hertz': 1_000_000},
         }
 
+    logger.info(f'daemon_cfg={daemon_cfg}')
+    logger.info(f'workload_cfg={workload_cfg}')
     asyncio.run(
         launch_application(
             options.plan,
