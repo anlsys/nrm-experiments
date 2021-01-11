@@ -230,11 +230,11 @@ def pubMeasurements_extractor(msg_id, payload):
     timestamp, measures = payload
     for data in measures:
         yield {
-            'msg.timestamp': timestamp,
+            'msg.timestamp': timestamp * 1e-6,  # convert µs in s
             'msg.id': msg_id,
             'msg.type': 'pubMeasurements',
             #
-            'sensor.timestamp': data['time'],
+            'sensor.timestamp': data['time'] * 1e-6,  # convert µs in s
             'sensor.id': data['sensorID'],
             'sensor.value': data['sensorValue'],
         }
@@ -243,7 +243,7 @@ def pubMeasurements_extractor(msg_id, payload):
 def pubProgress_extractor(msg_id, payload):
     timestamp, identification, value = payload
     yield {
-        'msg.timestamp': timestamp,
+        'msg.timestamp': timestamp * 1e-6,  # convert µs in s
         'msg.id': msg_id,
         'msg.type': 'pubProgress',
         #
