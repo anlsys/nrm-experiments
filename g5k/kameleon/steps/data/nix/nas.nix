@@ -5,4 +5,6 @@
     analysis = false;
     jupyter = false;
   }) }:
-drv.overrideAttrs (o: { buildInputs = o.buildInputs ++ [ pkgs.nas ]; })
+let xpctl = import ./xpctl.nix;
+in drv.overrideAttrs
+(o: { buildInputs = o.buildInputs ++ [ pkgs.nas ] ++ xpctl pkgs; })
