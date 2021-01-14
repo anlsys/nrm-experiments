@@ -1,3 +1,2 @@
-cerberus
-click
-ruamel.yaml
+# read requirements from setup.cfg
+.
