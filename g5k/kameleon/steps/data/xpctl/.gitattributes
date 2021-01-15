@@ -1,0 +1,7 @@
+# git specific files
+.gitignore export-ignore
+.gitattributes export-ignore
+.mailmap export-ignore
+
+# diff patterns
+*.py eol=lf diff=python

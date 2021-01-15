@@ -1,0 +1,6 @@
+.gitattributes
+.gitignore
+.pylintrc
+.tarexclude
+*.egg-info
+__pycache__

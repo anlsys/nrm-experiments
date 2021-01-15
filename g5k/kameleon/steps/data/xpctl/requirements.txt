@@ -1,0 +1,2 @@
+# read requirements from setup.cfg
+.

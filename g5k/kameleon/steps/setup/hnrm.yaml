@@ -16,7 +16,7 @@
   - download_file_in:
     - $${hnrm_location}/hnrm-$${hnrm_distrib}.tar.gz
     - $${hnrm_home}.tar.gz
-  - exec_in: tar -xf $${hnrm_home}.tar.gz -C $${install_dir}
+  - exec_in: tar --extract --file=$${hnrm_home}.tar.gz --directory=$${install_dir}
   - exec_in: rm $${hnrm_home}.tar.gz
 
 - install_hnrm:

@@ -17,8 +17,8 @@
   - download_file_in:
     - $${nix_location}/nix-$${nix_distrib}.tar.xz
     - $${nix_home}.tar.xz
-  - exec_in: tar -xf $${nix_home}.tar.xz -C /tmp
-  - exec_in: rm $${nix_home}.tar.xz
+  - exec_in: tar --extract --file=$${nix_home}.tar.xz --directory=/tmp
+  - exec_in: rm -- $${nix_home}.tar.xz
 
 - init_install_env:
   # Nix installer uses a non-root user with sudo :S (why not root?)

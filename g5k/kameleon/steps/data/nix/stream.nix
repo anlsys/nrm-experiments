@@ -6,12 +6,13 @@
     analysis = false;
     jupyter = false;
   }) }:
-drv.overrideAttrs (o: {
+let xpctl = import ./xpctl.nix;
+in drv.overrideAttrs (o: {
   buildInputs = o.buildInputs ++ [
     (pkgs.stream.override {
       iterationCount = iterationCount;
       problemSize = problemSize;
       nrmSupport = nrmSupport;
     })
-  ];
+  ] ++ xpctl pkgs;
 })
