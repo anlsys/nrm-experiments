@@ -294,7 +294,7 @@ def update_sensors_list(daemon, known_sensors, *, maxtry=CPD_SENSORS_MAXTRY, sle
     for _ in range(maxtry):
         new_sensors = [
             sensor
-            for sensor in daemon.get_cpd().sensors()
+            for sensor in daemon.req_cpd().sensors()
             if sensor not in known_sensors
         ]
         if new_sensors:
@@ -319,7 +319,7 @@ def enforce_powercap(daemon, rapl_actuators, powercap):
 def collect_rapl_actuators(daemon):
     # the configuration of RAPL actuators solely depends on the daemon: there
     # is no need to wait for the application to start
-    cpd = daemon.get_cpd()
+    cpd = daemon.req_cpd()
 
     # get all RAPL actuator (XXX: should filter on tag rather than name)
     rapl_actuators = list(
@@ -410,7 +410,7 @@ async def launch_application(plan, daemon_cfg, workload_cfg, *, sleep_duration=0
         rapl_actuators = collect_rapl_actuators(daemon)
 
         # collect workload-independent sensors (e.g., RAPL)
-        sensors = daemon.get_cpd().sensors()
+        sensors = daemon.req_cpd().sensors()
         logger.info(f'daemon_sensors={sensors}')
 
         # XXX: trigger actions with time == 0
