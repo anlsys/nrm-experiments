@@ -142,6 +142,9 @@ function run {
 		# create empty archive
 		tar --create --file="${archive}" --files-from=/dev/null
 
+		# record experiment plan
+		tar --append --file="${archive}" --transform='s,^.*/,,' -- "${plan}"
+
 		# snapshot pre-run state
 		tar --append --file="${archive}" --directory="${LOGDIR}" -- "${PRERUN_SNAPSHOT_FILES[@]}"
 		snapshot_system_state "${archive}" 'pre'
