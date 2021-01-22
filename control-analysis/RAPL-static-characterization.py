@@ -14,6 +14,9 @@ import matplotlib.pyplot as plt
 import yaml
 import pickle
 import math
+# For data modeling
+import scipy.optimize as opt
+import numpy as np
 
 
 # Getting the right paths
@@ -93,9 +96,14 @@ for cluster in clusters:
         avg1 = data[cluster][trace]['rapl_sensors']['value1'].mean()
         avg2 = data[cluster][trace]['rapl_sensors']['value2'].mean()
         avg3 = data[cluster][trace]['rapl_sensors']['value3'].mean()
-        data[cluster][trace]['aggregated_values'] = {'rapl0':avg0,'rapl1':avg1,'rapl2':avg2,'rapl3':avg3,'downstream':data[cluster][trace]['performance_sensors']['downstream'].mean(),'progress':data[cluster][trace]['performance_sensors']['progress']}
+        std0 = data[cluster][trace]['rapl_sensors']['value0'].std()
+        std1 = data[cluster][trace]['rapl_sensors']['value1'].std()
+        std2 = data[cluster][trace]['rapl_sensors']['value2'].std()
+        std3 = data[cluster][trace]['rapl_sensors']['value3'].std()
+        data[cluster][trace]['aggregated_values'] = {'rapl0':avg0,'rapl1':avg1,'rapl2':avg2,'rapl3':avg3,'rapl0_std':std0,'rapl1_std':std1,'rapl2_std':std2,'rapl3_std':std3,'downstream':data[cluster][trace]['performance_sensors']['downstream'].mean(),'progress':data[cluster][trace]['performance_sensors']['progress']}
         avgs = pd.DataFrame({'averages':[avg0, avg1, avg2, avg3]})
         data[cluster][trace]['aggregated_values']['rapls'] = avgs.mean()[0]
+        #data[cluster][trace]['aggregated_values']['rapls_std'] = avgs.std()[0]
         # Sensors periods
             # Raplcluster = 'gros'
         rapl_elapsed_time = data[cluster][trace]['rapl_sensors'].index
@@ -105,6 +113,8 @@ for cluster in clusters:
         performance_elapsed_time = data[cluster][trace]['performance_sensors'].index
         data[cluster][trace]['aggregated_values']['performance_periods'] = pd.DataFrame([performance_elapsed_time[t]-performance_elapsed_time[t-1] for t in range(1,len(performance_elapsed_time))], index=[performance_elapsed_time[t] for t in range(1,len(performance_elapsed_time))], columns=['periods'])
         data[cluster][trace]['aggregated_values']['average_performance_periods'] = data[cluster][trace]['aggregated_values']['performance_periods'].mean()[0]
+        data[cluster][trace]['aggregated_values']['performance_frequency'] = pd.DataFrame([1/(performance_elapsed_time[t]-performance_elapsed_time[t-1]) for t in range(1,len(performance_elapsed_time))], index=[performance_elapsed_time[t] for t in range(1,len(performance_elapsed_time))], columns=['frequency'])
+        data[cluster][trace]['aggregated_values']['average_performance_frequency'] = data[cluster][trace]['aggregated_values']['performance_frequency'].mean()[0]
         # Execution time:
         data[cluster][trace]['aggregated_values']['execution_time'] = performance_elapsed_time[-1]
         # Sensor value count (at rapl sensor frequency) :
@@ -130,13 +140,15 @@ def load_obj(name ):
 # PLOTS SECTION
 clusters_styles = {clusters[0]:'peru',clusters[1]:'forestgreen',clusters[2]:'cornflowerblue'}
 TDP = {'yeti':125,'dahu':125,'gros':125} # thermal dissipation power, in W
+pmin = 40
+pmax=120
 
 # PLOT: Signals over time, visualization 
     # Choose a cluster and a trance
-cluster = 'dahu'
-asked_pcap = 80
+cluster = 'yeti'
+requested_pcap = 50
 for trace in traces[cluster]:
-    if asked_pcap == data[cluster][trace]['parameters']['powercap']:
+    if requested_pcap == data[cluster][trace]['parameters']['powercap']:
         my_trace = trace
 #my_traces = [traces[cluster][3], traces[cluster][7], traces[cluster][8]]
 
@@ -145,8 +157,8 @@ fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(6.6,6.6))
 fig.suptitle(data[cluster][my_trace]['parameters']['benchmark']+', Pcap='+str(data[cluster][my_trace]['parameters']['powercap'])+'W')
 #for my_trace in my_traces:
 #data[cluster][my_trace]['performance_sensors']['downstream'].plot(color='cornflowerblue',ax=axes[0], style=".", markersize=2)
-data[cluster][trace]['aggregated_values']['performance_periods'].plot(color='cornflowerblue',ax=axes[0], style=".", markersize=2)
-axes[0].set_ylabel('pubprogress periods (s)')
+data[cluster][trace]['aggregated_values']['performance_frequency'].plot(color='cornflowerblue',ax=axes[0], style=".", markersize=2)
+axes[0].set_ylabel('pubprogress frequency (s$^-1$)')
 axes[0].grid(True)
 #for my_trace in my_traces:
 axes[1].axhline(y=data[cluster][my_trace]['parameters']['powercap'], color='lightcoral', linestyle='-')
@@ -154,10 +166,11 @@ data[cluster][my_trace]['rapl_sensors']['value0'].plot(color='forestgreen',ax=ax
 data[cluster][my_trace]['rapl_sensors']['value1'].plot(color='limegreen',ax=axes[1], style=".")#, style="+",  markersize=4)
 data[cluster][my_trace]['rapl_sensors']['value2'].plot(color='darkolivegreen',ax=axes[1], style="-")#, style="+",  markersize=4)
 data[cluster][my_trace]['rapl_sensors']['value3'].plot(color='lightgreen',ax=axes[1], style="-")#, style="+",  markersize=4)
+#axes[1].axhline(y=TDP[cluster], color='black', linestyle=':')
 axes[1].set_ylabel('Power (in W)')
-axes[1].legend(['asked_powercap','rapl_sensors per package'],fontsize='small',ncol=1)
+axes[1].legend(['requested_powercap','rapl_sensors per package'],fontsize='small',ncol=1)
 axes[1].grid(True)
-axes[1].set_ylim([0,155])
+#axes[1].set_ylim([0,155])
 #for my_trace in my_traces:
 #data[cluster][my_trace]['performance_sensors']['progress'].plot(color='goldenrod',ax=axes[2], style=".", markersize=2)
 #data[cluster][trace]['aggregated_values']['performance_periods'].plot(color='goldenrod',ax=axes[2], style=".", markersize=2)
@@ -165,122 +178,203 @@ data[cluster][my_trace]['aggregated_values']['progress_count'].plot(color='golde
 axes[2].set_ylabel('pubProgress count')
 axes[2].grid(True)
 
-plt.savefig(os.getcwd()+'/Documents/working-documents/figures/'+experiment_date+'/periods_rapls_count_vs_time_'+cluster+'-'+str(data[cluster][my_trace]['parameters']['powercap'])+'W.pdf')
+plt.savefig(os.getcwd()+'/Documents/working-documents/figures/'+experiment_date+'/frequency_rapls_count_vs_time_'+cluster+'-'+str(data[cluster][my_trace]['parameters']['powercap'])+'W.pdf')
 
-# PLOT: Actuator: In average: Power asked vs. power measured
-paskedvsmeasured = {}
+# PLOT: Actuator: In average: Power requested vs. power measured
+prequestedvsmeasured = {}
 for cluster in clusters:
-    paskedvsmeasured[cluster] = pd.DataFrame()
-    paskedvsmeasured[cluster]['asked_pcap'] = [data[cluster][trace]['parameters']['powercap'] for trace in traces[cluster]]
-    paskedvsmeasured[cluster]['0'] = [data[cluster][trace]['aggregated_values']['rapl0'] for trace in traces[cluster]]
-    paskedvsmeasured[cluster]['1'] = [data[cluster][trace]['aggregated_values']['rapl1'] for trace in traces[cluster]]
-    paskedvsmeasured[cluster]['2'] = [data[cluster][trace]['aggregated_values']['rapl2'] for trace in traces[cluster]]
-    paskedvsmeasured[cluster]['3'] = [data[cluster][trace]['aggregated_values']['rapl3'] for trace in traces[cluster]]
-    paskedvsmeasured[cluster]['pcap_asked'] = paskedvsmeasured[cluster]['asked_pcap']
-    paskedvsmeasured[cluster] = paskedvsmeasured[cluster].set_index('asked_pcap')
+    prequestedvsmeasured[cluster] = pd.DataFrame()
+    prequestedvsmeasured[cluster]['requested_pcap'] = [data[cluster][trace]['parameters']['powercap'] for trace in traces[cluster]]
+    prequestedvsmeasured[cluster]['0'] = [data[cluster][trace]['aggregated_values']['rapl0'] for trace in traces[cluster]]
+    #prequestedvsmeasured[cluster]['0+'] = [data[cluster][trace]['aggregated_values']['rapl0']+data[cluster][trace]['aggregated_values']['rapl0_std'] for trace in traces[cluster]]
+    #prequestedvsmeasured[cluster]['0-'] = [data[cluster][trace]['aggregated_values']['rapl0']-data[cluster][trace]['aggregated_values']['rapl0_std'] for trace in traces[cluster]]
+    prequestedvsmeasured[cluster]['1'] = [data[cluster][trace]['aggregated_values']['rapl1'] for trace in traces[cluster]]
+    prequestedvsmeasured[cluster]['2'] = [data[cluster][trace]['aggregated_values']['rapl2'] for trace in traces[cluster]]
+    prequestedvsmeasured[cluster]['3'] = [data[cluster][trace]['aggregated_values']['rapl3'] for trace in traces[cluster]]
+    prequestedvsmeasured[cluster]['rapls'] = [data[cluster][trace]['aggregated_values']['rapls'] for trace in traces[cluster]]
+    prequestedvsmeasured[cluster]['pcap_requested'] = prequestedvsmeasured[cluster]['requested_pcap']
+    prequestedvsmeasured[cluster] = prequestedvsmeasured[cluster].set_index('requested_pcap')
+    prequestedvsmeasured[cluster].sort_index(inplace=True)
+    
+def powermodel(power_requested, slope, offset):
+    return slope*power_requested+offset
+
+power_model_data = {}
+power_model = {}
+power_parameters = {}
+r_squared_power_actuator = {}
+for cluster in clusters:
+    power_parameters0 = [1, 0]                                        # guessed params
+    power_parameters[cluster], power_parameters_cov = opt.curve_fit(powermodel, prequestedvsmeasured[cluster]['pcap_requested'].loc[pmin:pmax], prequestedvsmeasured[cluster]['rapls'].loc[pmin:pmax], p0=power_parameters0)     # /!\ model computed with package 0
+    # Model
+    power_model[cluster] = powermodel(prequestedvsmeasured[cluster]['pcap_requested'].loc[pmin:pmax], power_parameters[cluster][0], power_parameters[cluster][1]) # model with fixed alpha
+    # Equations taken from https://en.wikipedia.org/wiki/Coefficient_of_determination : "proportion of the variance in the dependent variable that is predictable from the independent variable"
+    residuals_pcap = prequestedvsmeasured[cluster]['rapls'].loc[pmin:pmax] - power_model[cluster] 
+    ss_res_pcap = np.sum(residuals_pcap**2)
+    ss_tot_pcap = np.sum((prequestedvsmeasured[cluster]['rapls'].loc[pmin:pmax]-np.mean(prequestedvsmeasured[cluster]['rapls'].loc[pmin:pmax]))**2)
+    r_squared_power_actuator[cluster] = 1 - (ss_res_pcap / ss_tot_pcap)
+    print(cluster)
+    print(r_squared_power_actuator[cluster])
+
     
 for cluster in clusters:
     fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(6.6,6.6))
-    fig.suptitle('Power asked vs. measured - Cluster: '+cluster)
-    paskedvsmeasured[cluster]['0'].plot(color=clusters_styles[cluster],style="P")
-    paskedvsmeasured[cluster]['1'].plot(color=clusters_styles[cluster],marker="X",linestyle='')
-    paskedvsmeasured[cluster]['2'].plot(color=clusters_styles[cluster],marker="o",linestyle='')
-    paskedvsmeasured[cluster]['3'].plot(color=clusters_styles[cluster],marker="d",linestyle='')
+    fig.suptitle('Power requested vs. measured - Cluster: '+cluster)
+    prequestedvsmeasured[cluster]['0'].plot(color=clusters_styles[cluster],style="P")
+    #prequestedvsmeasured[cluster]['0+'].plot(color=clusters_styles[cluster],style=".")
+    #prequestedvsmeasured[cluster]['0-'].plot(color=clusters_styles[cluster],style=".")
+    prequestedvsmeasured[cluster]['1'].plot(color=clusters_styles[cluster],marker="X",linestyle='')
+    prequestedvsmeasured[cluster]['2'].plot(color=clusters_styles[cluster],marker="o",linestyle='')
+    prequestedvsmeasured[cluster]['3'].plot(color=clusters_styles[cluster],marker="d",linestyle='')
+    plt.plot(prequestedvsmeasured[cluster]['pcap_requested'].loc[pmin:pmax],power_model[cluster],color=clusters_styles[cluster]) # model 0.04
     axes.axhline(y=TDP[cluster], color='lightcoral', linestyle='-')
-    paskedvsmeasured[cluster]['pcap_asked'].plot(color='grey', linewidth=0.5)
+    prequestedvsmeasured[cluster]['pcap_requested'].plot(color='grey', linewidth=0.5)
     axes.grid(True)
     axes.set_ylabel('Measured Power (in W)')
-    axes.set_xlabel('Asked Power (in W)')
+    axes.set_xlabel('requested Power (in W)')
     axes.legend(['Package 0','Package 1','Package 2','Package 3','TDP'],fontsize='small',loc='upper left',ncol=1)
     fig.gca().set_aspect('equal', adjustable='box')
     
-    plt.savefig(os.getcwd()+'/Documents/working-documents/figures/'+experiment_date+'/asked_pcap_vs_rapls_'+cluster+'.pdf')
+    plt.savefig(os.getcwd()+'/Documents/working-documents/figures/'+experiment_date+'/requested_pcap_vs_rapls_'+cluster+'.pdf')
 
 # PLOT: Actuator: Through time
-asked_pcaps = [30, 90, 140]
+requested_pcaps = [40, 70, 100, 120]
 selected_traces = {}
 for cluster in clusters:
     selected_traces[cluster] = {}
-    for asked_pcap in asked_pcaps:
+    for requested_pcap in requested_pcaps:
         for trace in traces[cluster]:
-            if asked_pcap == data[cluster][trace]['parameters']['powercap']:
-                selected_traces[cluster][asked_pcap] = trace
+            if requested_pcap == data[cluster][trace]['parameters']['powercap']:
+                selected_traces[cluster][requested_pcap] = trace
     # plot
-colors_pcaps={asked_pcaps[0]:'crimson',asked_pcaps[1]:'orange',asked_pcaps[2]:'dodgerblue'}
+colors_pcaps={requested_pcaps[0]:'crimson',requested_pcaps[1]:'yellowgreen',requested_pcaps[2]:'gold',requested_pcaps[3]:'dodgerblue'}
 for cluster in clusters:
     fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(6.6,6.6))
     fig.suptitle('Cluster: '+cluster)
-    for asked_pcap in asked_pcaps:
-        axes.axhline(y=data[cluster][selected_traces[cluster][asked_pcap]]['parameters']['powercap'], color=colors_pcaps[asked_pcap], linestyle='-')
-        data[cluster][selected_traces[cluster][asked_pcap]]['rapl_sensors']['value0'].plot(color=colors_pcaps[asked_pcap],ax=axes, marker="+", linestyle='')
-        data[cluster][selected_traces[cluster][asked_pcap]]['rapl_sensors']['value1'].plot(color=colors_pcaps[asked_pcap],ax=axes, marker="x", linestyle='')
-        data[cluster][selected_traces[cluster][asked_pcap]]['rapl_sensors']['value2'].plot(color=colors_pcaps[asked_pcap],ax=axes, marker="1", linestyle='')
-        data[cluster][selected_traces[cluster][asked_pcap]]['rapl_sensors']['value3'].plot(color=colors_pcaps[asked_pcap],ax=axes, marker="2", linestyle='')
+    for requested_pcap in requested_pcaps:
+        axes.axhline(y=data[cluster][selected_traces[cluster][requested_pcap]]['parameters']['powercap'], color=colors_pcaps[requested_pcap], linestyle='-')
+        data[cluster][selected_traces[cluster][requested_pcap]]['rapl_sensors']['value0'].plot(color=colors_pcaps[requested_pcap],ax=axes, marker="+", linestyle='')
+        data[cluster][selected_traces[cluster][requested_pcap]]['rapl_sensors']['value1'].plot(color=colors_pcaps[requested_pcap],ax=axes, marker="x", linestyle='')
+        data[cluster][selected_traces[cluster][requested_pcap]]['rapl_sensors']['value2'].plot(color=colors_pcaps[requested_pcap],ax=axes, marker="1", linestyle='')
+        data[cluster][selected_traces[cluster][requested_pcap]]['rapl_sensors']['value3'].plot(color=colors_pcaps[requested_pcap],ax=axes, marker="2", linestyle='')
+    axes.axhline(y=TDP[cluster], color='black', linestyle=':')
     axes.set_ylabel('Power (in W)')
-    axes.legend(['asked_powercap','rapl_sensors per package'],fontsize='small',loc='upper center',ncol=1)
+    axes.legend(['requested_powercap','rapl_sensors per package'],fontsize='small',loc='upper center',ncol=1)
     axes.grid(True)
     axes.set_ylim([0,155])
     
-    plt.savefig(os.getcwd()+'/Documents/working-documents/figures/'+experiment_date+'/rapls_actuator_through_time'+cluster+'-'+str(asked_pcaps)+'W.pdf')
+    plt.savefig(os.getcwd()+'/Documents/working-documents/figures/'+experiment_date+'/rapls_actuator_through_time'+cluster+'-'+str(requested_pcaps)+'W.pdf')
     
 # PLOT: Static Characteristic
 sc = {}
-sc_asked = {}
-powermodel = {}
+sc_requested = {}
+power2perf_model = {}
+power2perf_params = {}
+power2perf_parameters = {}
+r_squared = {}
 alpha = 0.04 # to find automatically
-elected_performance_sensor = 'average_progress_count' # choose between: 'average_performance_periods' 'average_progress_count'
+elected_performance_sensor = 'average_progress_count' # choose between: 'average_performance_periods' 'average_progress_count' 'average_performance_frequency'
 for cluster in clusters:
     sc[cluster] = pd.DataFrame([data[cluster][trace]['aggregated_values'][elected_performance_sensor] for trace in traces[cluster]], index=[data[cluster][trace]['aggregated_values']['rapls'] for trace in traces[cluster]], columns=[elected_performance_sensor])
     sc[cluster].sort_index(inplace=True)
-    sc_asked[cluster] = pd.DataFrame([data[cluster][trace]['aggregated_values'][elected_performance_sensor] for trace in traces[cluster]], index=[data[cluster][trace]['parameters']['powercap'] for trace in traces[cluster]], columns=[elected_performance_sensor])
-    sc_asked[cluster].sort_index(inplace=True)
-    #powermodel[cluster] = [sc[cluster].at[max(sc[cluster].index),elected_performance_sensor]*(1-math.exp(-alpha*(i-min(sc[cluster].index)))) for i in sc[cluster].index] # final value:supposed to be known ?
-    powermodel[cluster] = [(sc[cluster].at[sc[cluster].index[-1],elected_performance_sensor]+sc[cluster].at[sc[cluster].index[-2],elected_performance_sensor]+sc[cluster].at[sc[cluster].index[-3],elected_performance_sensor])/3*(1-math.exp(-alpha*(i-min(sc[cluster].index)))) for i in sc[cluster].index] # mean over last 3 values:  supposed to be known ?
+    sc_requested[cluster] = pd.DataFrame([data[cluster][trace]['aggregated_values'][elected_performance_sensor] for trace in traces[cluster]], index=[data[cluster][trace]['parameters']['powercap'] for trace in traces[cluster]], columns=[elected_performance_sensor])
+    sc_requested[cluster].sort_index(inplace=True)
+    #power2perf_model[cluster] = [sc[cluster].at[max(sc[cluster].index),elected_performance_sensor]*(1-math.exp(-alpha*(i-min(sc[cluster].index)))) for i in sc[cluster].index] # final value:supposed to be known ?
+    power2perf_model[cluster] = [(sc[cluster].at[sc[cluster].index[-1],elected_performance_sensor]+sc[cluster].at[sc[cluster].index[-2],elected_performance_sensor]+sc[cluster].at[sc[cluster].index[-3],elected_performance_sensor])/3*(1-math.exp(-alpha*(i-min(sc[cluster].index)))) for i in sc[cluster].index] # mean over last 3 values:  supposed to be known ?
+    def power2perf_onlyalpha(power, alpha):
+        perf_inf = (sc[cluster].at[sc[cluster].index[-1],elected_performance_sensor]+sc[cluster].at[sc[cluster].index[-2],elected_performance_sensor]+sc[cluster].at[sc[cluster].index[-3],elected_performance_sensor])/3
+        power_0 =  min(sc[cluster].index)
+        return perf_inf*(1-np.exp(-alpha*(power-power_0)))
+
+
+def power2perf(power, alpha, perf_inf, power_0):
+    return perf_inf*(1-np.exp(-alpha*(power-power_0)))
+
+
+
+for cluster in clusters:
+    power2perf_param0 = [0.04, (sc[cluster].at[sc[cluster].index[-1],elected_performance_sensor]+sc[cluster].at[sc[cluster].index[-2],elected_performance_sensor]+sc[cluster].at[sc[cluster].index[-3],elected_performance_sensor])/3, min(sc[cluster].index)]                                        # guessed params
+    power2perf_param_opt, power2perf_param_cov = opt.curve_fit(power2perf, sc[cluster].index, sc[cluster][elected_performance_sensor], p0=power2perf_param0)     
+    power2perf_onlyalpha_param_opt, power2perf_onlyalpha_param_cov = opt.curve_fit(power2perf_onlyalpha, sc[cluster].index, sc[cluster][elected_performance_sensor], p0=alpha)
+    power2perf_params[cluster] = power2perf_onlyalpha_param_opt[0]
+    # Model
+    #power2perf_model[cluster] = power2perf(sc[cluster].index, *power2perf_param_opt) # model with optimization of all parameters
+    #power2perf_model[cluster] = power2perf_onlyalpha(sc[cluster].index, *power2perf_onlyalpha_param_opt) # model with optimizd alpha
+    power2perf_model[cluster] = power2perf_onlyalpha(sc[cluster].index, 0.04) # model with fixed alpha
+    # Equations taken from https://en.wikipedia.org/wiki/Coefficient_of_determination : "proportion of the variance in the dependent variable that is predictable from the independent variable"
+    residuals = sc[cluster][elected_performance_sensor] - power2perf_model[cluster]
+    ss_res = np.sum(residuals**2)
+    ss_tot = np.sum((sc[cluster][elected_performance_sensor]-np.mean(sc[cluster][elected_performance_sensor]))**2)
+    r_squared[cluster] = 1 - (ss_res / ss_tot)
+    print(cluster)
+    print(r_squared[cluster])
+
 
 fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(6.6,6.6))
-fig.suptitle('Static Characteristic - Performance vs Measured and Asked Power')
+#fig.suptitle('Static Characteristic - Performance vs Measured and requested Power')
 for cluster in clusters:
-    sc[cluster][elected_performance_sensor].plot(color=clusters_styles[cluster],marker="x")
-    sc_asked[cluster][elected_performance_sensor].plot(color=clusters_styles[cluster],marker="o",linestyle=':')
-    plt.plot(sc[cluster].index,powermodel[cluster],color=clusters_styles[cluster])
+    #sc[cluster][elected_performance_sensor].plot(color=clusters_styles[cluster],marker="x") # power vs. measured progress
+    #sc_requested[cluster][elected_performance_sensor].plot(color=clusters_styles[cluster],marker="o",linestyle=':') # requested power vs measured progress
+    #plt.plot(sc[cluster].index,power2perf_model[cluster],color=clusters_styles[cluster]) # power vs. modelled progress
+    # Plot linearized static characteristic:
+    plt.plot(-np.exp(-0.04*(sc[cluster].index-min(sc[cluster].index))),sc[cluster][elected_performance_sensor],color=clusters_styles[cluster], marker="+",linestyle='') # data (lin with fixed alpha = 0.04)
+    plt.plot(-np.exp(-0.04*(sc[cluster].index-min(sc[cluster].index))),power2perf_model[cluster],color=clusters_styles[cluster]) # model 0.04
 axes.grid(True)
 axes.set_ylabel('Performance ('+elected_performance_sensor+')')
 axes.set_xlabel('Power (in W)')
+axes.set_xlabel('Linearized Power: $-exp^{-0.04(power-30)}$')
 #axes.set_yscale('log')
 #axes.set_xscale('log')
 legend = []
 for cluster in clusters:
-    legend += [cluster+' - measured']
-    legend += [cluster+' - asked']
-axes.legend(legend,fontsize='small',loc='upper center',ncol=1)
+    #legend += [cluster+' - measured']
+    #legend += [cluster+' - requested']
+    #legend += [cluster+' - model, alpha='+str(power2perf_params[cluster])]
+    legend += [cluster+' - measurements, $R^2$='+str(r_squared[cluster])]
+    legend += [cluster+' - model, alpha=0.04']
+axes.legend(legend,fontsize='small',loc='upper left',ncol=1)
 
-#plt.savefig(os.getcwd()+'/Documents/working-documents/figures/'+experiment_date+'/SC_'+elected_performance_sensor+'vs_rapls_asked_pcap_with_model_alpha'+str(alpha)+'.pdf')
+#plt.savefig(os.getcwd()+'/Documents/working-documents/figures/'+experiment_date+'/SC_'+elected_performance_sensor+'vs_rapls_requested_pcap_with_model_alpha'+str(alpha)+'.pdf')
+#plt.savefig(os.getcwd()+'/Documents/working-documents/figures/'+experiment_date+'/SC_'+elected_performance_sensor+'vs_rapls_requested_pcap.pdf')
+plt.savefig(os.getcwd()+'/Documents/working-documents/figures/'+experiment_date+'/SC_'+elected_performance_sensor+'_vs_linearized_pcap_004.pdf')
+
 
 # PLOT: Execution time vs. power
 exec_time_power = {}
-exec_time_power_asked = {}
+exec_time_power_requested = {}
 for cluster in clusters:
     exec_time_power[cluster] = pd.DataFrame([data[cluster][trace]['aggregated_values']['execution_time'] for trace in traces[cluster]], index=[data[cluster][trace]['aggregated_values']['rapls'] for trace in traces[cluster]], columns=['execution_time'])
     exec_time_power[cluster].sort_index(inplace=True)
-    exec_time_power_asked[cluster] = pd.DataFrame([data[cluster][trace]['aggregated_values']['execution_time'] for trace in traces[cluster]], index=[data[cluster][trace]['parameters']['powercap'] for trace in traces[cluster]], columns=['execution_time'])
-    exec_time_power_asked[cluster].sort_index(inplace=True)
+    exec_time_power_requested[cluster] = pd.DataFrame([data[cluster][trace]['aggregated_values']['execution_time'] for trace in traces[cluster]], index=[data[cluster][trace]['parameters']['powercap'] for trace in traces[cluster]], columns=['execution_time'])
+    exec_time_power_requested[cluster].sort_index(inplace=True)
 
 fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(6.6,6.6))
-fig.suptitle('Execution time vs Measured and Asked Power')
+fig.suptitle('Execution time vs Measured and requested Power')
 for cluster in clusters:
     exec_time_power[cluster]['execution_time'].plot(color=clusters_styles[cluster],marker="x")
-    exec_time_power_asked[cluster]['execution_time'].plot(color=clusters_styles[cluster],marker="o",linestyle=':')
+    #exec_time_power_requested[cluster]['execution_time'].plot(color=clusters_styles[cluster],marker="o",linestyle=':')
 axes.grid(True)
 axes.set_ylabel('Execution Time (in s)')
 #axes.set_yscale('log')
 axes.set_xlabel('Power (in W)')
+#axes.set_ylim([0,500])
 legend = []
 for cluster in clusters:
     legend += [cluster+' - measured']
-    legend += [cluster+' - asked']
+    #legend += [cluster+' - requested']
 axes.legend(legend,fontsize='small',loc='upper right',ncol=1)
 
-plt.savefig(os.getcwd()+'/Documents/working-documents/figures/'+experiment_date+'/execution time_vs_rapls_asked_pcap.pdf')
+plt.savefig(os.getcwd()+'/Documents/working-documents/figures/'+experiment_date+'/execution_time_vs_rapls_pcap.pdf')
+
+# CORRELATION ANAYSIS: Pearson correlation coefficient 
+for elected_performance_sensor in ['average_performance_periods','average_progress_count','average_performance_frequency']:
+    print(elected_performance_sensor)
+    for cluster in clusters:
+        print(cluster)
+        print(np.corrcoef([data[cluster][trace]['aggregated_values']['execution_time'] for trace in traces[cluster]], [data[cluster][trace]['aggregated_values'][elected_performance_sensor] for trace in traces[cluster]]))
+    print('yeti without experiment 30W')
+    traces_yeti_without30=traces[cluster].drop(2)
+    print(np.corrcoef([data[cluster][trace]['aggregated_values']['execution_time'] for trace in traces_yeti_without30], [data[cluster][trace]['aggregated_values'][elected_performance_sensor] for trace in traces_yeti_without30]))
 
 # Identification
 # https://python-control.readthedocs.io/en/0.8.3/index.html
