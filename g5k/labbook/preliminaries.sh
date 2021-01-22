@@ -4,19 +4,21 @@
 #
 # -----------------------------------------------------------------------------
 #
-# Runs preliminary experiments: measure a single datapoint for various powercap
-# settings.
+# Runs preliminary experiments: measure a single datapoint for various
+# experiment plans.
 # In particular, we do not take care of minimizing any bias due to the order in
 # which benchmarks are run, or due to the machine, or …
 #
 # -----------------------------------------------------------------------------
 #
 # authors: Raphaël Bleuse <raphael.bleuse@inria.fr>
-# date: 2020-11-20
-# version: 0.1
+# date: 2021-01-22
+# version: 0.2
 
 export LC_ALL=C  # ensure we are working with known locales
 set -e -u -f -o pipefail # safer shell script
+
+declare -r PROGRAM=${0##*/}
 
 
 # parameters  -----------------------------------------------------------------
@@ -24,9 +26,6 @@ set -e -u -f -o pipefail # safer shell script
 declare -r BENCHMARK='stream_c'
 declare -r ITERATION_COUNT='10_000'
 declare -r PROBLEM_SIZE='33_554_432'
-
-declare -a POWERCAPS
-mapfile -t POWERCAPS < <(seq 30 10 150 | shuf)  # seq <min> <step> <max>
 
 
 # configuration  --------------------------------------------------------------
@@ -64,6 +63,7 @@ declare -ra POSTRUN_SNAPSHOT_FILES=(
 	# outputs
 	dump_pubMeasurements.csv
 	dump_pubProgress.csv
+	identification-runner.log
 	nrm.log
 )
 
@@ -72,13 +72,13 @@ declare -ra POSTRUN_SNAPSHOT_FILES=(
 function dump_parameters {
 	declare -r timestamp="${1}"
 	declare -r benchmark="${2}"
-	declare -r powercap="${3}"
+	declare -r plan="${3}"
 	declare -r extra="${*:4}"
 
 	cat <<- EOF > "${LOGDIR}/${PARAMS_FILE}"
 		timestamp: ${timestamp}
 		benchmark: ${benchmark}
-		powercap: ${powercap}
+		experiment-plan: ${plan##*/}
 		extra: ${extra}
 	EOF
 }
@@ -107,12 +107,34 @@ function snapshot_system_state {
 
 
 function run {
-	for powercap in "${POWERCAPS[@]}"; do
+	# canonicalize path to experiment plans
+	local input
+	input="$(readlink --canonicalize-existing "${1}")"
+	readonly input
+
+	# extract experiment plans to run
+	declare -a experiment_plans
+	if [[ -d "${input}" ]]; then
+		mapfile -t experiment_plans < <(find "${input}" -maxdepth 1 -type f | shuf)
+	elif [[ -f "${input}" && -r "${input}" ]]; then
+		experiment_plans=("${input}")
+	else
+		usage
+		>&2 cat <<-EOF
+
+		Error: invalid INPUT argument
+		EOF
+		exit 64  # EX_USAGE (cf. sysexits.h)
+	fi
+	readonly experiment_plans
+
+	# run experiment plans
+	for plan in "${experiment_plans[@]}"; do
 		timestamp="$(date --iso-8601=seconds)"
 		archive="${DATADIR}/preliminaries_${BENCHMARK}_${timestamp}.tar"
 
 		# record run parameters
-		dump_parameters "${timestamp}" "${BENCHMARK}" "${powercap}" "--iterationCount=${ITERATION_COUNT} --problemSize=${PROBLEM_SIZE}"
+		dump_parameters "${timestamp}" "${BENCHMARK}" "${plan}" "--iterationCount=${ITERATION_COUNT} --problemSize=${PROBLEM_SIZE}"
 
 		# record machine topology
 		lstopo --output-format xml --whole-system --force "${LOGDIR}/${TOPOLOGY_FILE}"
@@ -125,7 +147,7 @@ function run {
 		snapshot_system_state "${archive}" 'pre'
 
 		# run benchmark
-		/opt/xplaunch static-gain --powercap="${powercap}" -- \
+		xpctl identification --experiment-plan="${plan}" -- \
 			"${BENCHMARK}" --iterationCount="${ITERATION_COUNT}" --problemSize="${PROBLEM_SIZE}"
 
 		# retrieve benchmark logs and snapshot post-run state
@@ -138,10 +160,31 @@ function run {
 }
 
 
+function usage() {
+	>&2 cat <<-EOF
+	Usage: ${PROGRAM} INPUT
+
+	Parameters:
+	  INPUT        Either:
+	                 - a single experiment plan (readable file)
+	                 - directory containing multiple experiment plans
+	EOF
+}
+
 # run  ------------------------------------------------------------------------
 
 # ensure output directory exists
 mkdir --parents "${DATADIR}"
 
+# check provided arugments
+if [[ $# -lt 1 ]]; then
+	usage
+	>&2 cat <<-EOF
+
+	Error: missing INPUT argument
+	EOF
+	exit 64  # EX_USAGE (cf. sysexits.h)
+fi
+
 # do the work
-run
+run "$1"
