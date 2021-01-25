@@ -167,7 +167,6 @@ def read_experiment_plan(filepath):
         )
 
     # check there are no conflicting actions at a given time
-    _sentinel = object
     for action, events in plan.items():
         already_defined_times = set()
         for event in events:

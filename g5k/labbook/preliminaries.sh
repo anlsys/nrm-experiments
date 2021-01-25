@@ -12,8 +12,8 @@
 # -----------------------------------------------------------------------------
 #
 # authors: Raphaël Bleuse <raphael.bleuse@inria.fr>
-# date: 2021-01-22
-# version: 0.2
+# date: 2021-01-25
+# version: 0.3
 
 export LC_ALL=C  # ensure we are working with known locales
 set -e -u -f -o pipefail # safer shell script
@@ -65,6 +65,7 @@ declare -ra POSTRUN_SNAPSHOT_FILES=(
 	dump_pubProgress.csv
 	identification-runner.log
 	nrm.log
+	time-metrics.csv
 )
 
 # helper functions  -----------------------------------------------------------
