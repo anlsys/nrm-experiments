@@ -20,6 +20,9 @@ import ruamel.yaml
 import nrm.tooling as nrm
 
 
+# frequency (in hertz) for RAPL sensor polling
+RAPL_SENSOR_FREQ = 1
+
 # maximum number of tries to get extra sensors definitions
 CPD_SENSORS_MAXTRY = 5
 
@@ -463,6 +466,11 @@ def run(options, cmd):
                     for action in options.plan['set_rapl_powercap']
                 )
             ],
+        },
+        'passiveSensorFrequency': {
+            # this configures the frequency of all 'passive' sensors, we only
+            # use RAPL sensors here
+            'hertz': RAPL_SENSOR_FREQ,
         },
         # 'verbose': 'Debug',
         # 'verbose': 'Info',
