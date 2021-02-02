@@ -271,11 +271,11 @@ assert DUMPED_MSG_TYPES.issubset(DUMPED_MSG_EXTRACTORS)
 
 def dump_upstream_msg(csvwriters, msg):
     msg_id = uuid.uuid4()
-    for msg_type, payload in msg.items():
-        msg2rows = DUMPED_MSG_EXTRACTORS.get(msg_type, noop_extractor)
-        csvwriter = csvwriters.get(msg_type)
-        for row in msg2rows(msg_id, payload):
-            csvwriter.writerow(row)
+    (msg_type, payload), = msg.items()  # single-key dict destructuring
+    msg2rows = DUMPED_MSG_EXTRACTORS.get(msg_type, noop_extractor)
+    csvwriter = csvwriters.get(msg_type)
+    for row in msg2rows(msg_id, payload):
+        csvwriter.writerow(row)
 
 
 # helper functions  ###########################################################
