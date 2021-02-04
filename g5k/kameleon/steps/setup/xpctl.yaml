@@ -25,7 +25,10 @@
   - local2in:
     - $${kameleon_data_dir}/runners/identification.py
     - $${xpctl_libexec_path}/runners/identification.py
-  - exec_in: chmod 755 $${xpctl_libexec_path}/runners/identification.py
+  - local2in:
+    - $${kameleon_data_dir}/runners/controller.py
+    - $${xpctl_libexec_path}/runners/controller.py
+  - exec_in: chmod 755 $${xpctl_libexec_path}/runners/*
 
 - generate_xpctl_wrapper:
   - write_raw_in:
@@ -55,6 +58,7 @@
 
       runners:
         identification: $${xpctl_libexec_path}/runners/identification.py
+        controller: $${xpctl_libexec_path}/runners/controller.py
 
 - install_nix_derivations_of_benchmarks:
   # xpctl dependencies
