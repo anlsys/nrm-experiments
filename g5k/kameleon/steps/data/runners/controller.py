@@ -2,11 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import contextlib
+import csv
 import logging
 import logging.config
 import math
 import statistics
 import time
+import uuid
 
 import nrm.tooling as nrm
 
@@ -63,6 +66,102 @@ LOGS_CONF = {
 logging.config.dictConfig(LOGS_CONF)
 
 logger = logging.getLogger(LOGGER_NAME)
+
+
+# CSV export  #################################################################
+
+DUMPED_MSG_TYPES = {
+    'pubMeasurements',
+    'pubProgress',
+}
+
+CSV_FIELDS = {
+    'common': (
+        'msg.timestamp',
+        'msg.id',
+        'msg.type',
+    ),
+    'pubMeasurements': (
+        'sensor.timestamp',  # time
+        'sensor.id',         # sensorID
+        'sensor.value',      # sensorValue
+    ),
+    'pubProgress': (
+        'sensor.cmd',    # cmdID
+        'sensor.task',   # taskID
+        'sensor.rank',   # rankID
+        'sensor.pid',    # processID
+        'sensor.tid',    # threadID
+        'sensor.value',
+    ),
+}
+assert DUMPED_MSG_TYPES.issubset(CSV_FIELDS)
+
+
+def initialize_csvwriters(stack: contextlib.ExitStack):
+    csvfiles = {
+        msg_type: stack.enter_context(open(f'/tmp/dump_{msg_type}.csv', 'w'))
+        for msg_type in DUMPED_MSG_TYPES
+    }
+
+    csvwriters = {
+        msg_type: csv.DictWriter(csvfile, fieldnames=CSV_FIELDS['common']+CSV_FIELDS[msg_type])
+        for msg_type, csvfile in csvfiles.items()
+    }
+    for csvwriter in csvwriters.values():
+        csvwriter.writeheader()
+
+    return csvwriters
+
+
+def pubMeasurements_extractor(msg_id, payload):
+    timestamp, measures = payload
+    for data in measures:
+        yield {
+            'msg.timestamp': timestamp * 1e-6,  # convert µs in s
+            'msg.id': msg_id,
+            'msg.type': 'pubMeasurements',
+            #
+            'sensor.timestamp': data['time'] * 1e-6,  # convert µs in s
+            'sensor.id': data['sensorID'],
+            'sensor.value': data['sensorValue'],
+        }
+
+
+def pubProgress_extractor(msg_id, payload):
+    timestamp, identification, value = payload
+    yield {
+        'msg.timestamp': timestamp * 1e-6,  # convert µs in s
+        'msg.id': msg_id,
+        'msg.type': 'pubProgress',
+        #
+        'sensor.cmd': identification['cmdID'],
+        'sensor.task': identification['taskID'],
+        'sensor.rank': identification['rankID'],
+        'sensor.pid': identification['processID'],
+        'sensor.tid': identification['threadID'],
+        'sensor.value': value,
+    }
+
+
+def noop_extractor(*_):
+    yield from ()
+
+
+DUMPED_MSG_EXTRACTORS = {
+    'pubMeasurements': pubMeasurements_extractor,
+    'pubProgress': pubProgress_extractor,
+}
+assert DUMPED_MSG_TYPES.issubset(DUMPED_MSG_EXTRACTORS)
+
+
+def dump_upstream_msg(csvwriters, msg):
+    msg_id = uuid.uuid4()
+    (msg_type, payload), = msg.items()  # single-key dict destructuring
+    msg2rows = DUMPED_MSG_EXTRACTORS.get(msg_type, noop_extractor)
+    csvwriter = csvwriters.get(msg_type)
+    for row in msg2rows(msg_id, payload):
+        csvwriter.writerow(row)
 
 
 # controller logic & configuration  ###########################################
@@ -132,16 +231,16 @@ class PIController:
         self.rapl_window_timestamp = time.time()  # start of current RAPL window
         self.heartbeat_timestamps = []
 
-    def control(self):
+    def control(self, csvwriters):
         while not self.daemon.all_finished():
             msg = self.daemon.upstream_recv()  # blocking call
+            dump_upstream_msg(csvwriters, msg)
             (msg_type, payload), = msg.items()  # single-key dict destructuring
             # dispatch to relevant logic
             if msg_type == 'pubProgress':
                 self._update_progress(payload)
             elif msg_type == 'pubMeasurements':
                 self._update_measure(payload)
-            # XXX: re-integrate logging of values
 
     def _update_progress(self, payload):
         timestamp, _, _ = payload
@@ -271,8 +370,15 @@ def launch_application(daemon_cfg, workload_cfg, *, sleep_duration=0.5):
                 raise RuntimeError('Unable to get application-specific sensors')
             logger.info(f'app_sensors={app_sensors}')
 
-        controller = PIController(daemon, rapl_actuators)
-        controller.control()
+
+        with contextlib.ExitStack() as stack:
+            # each message type is dumped into its own csv file
+            # each csv file is created with open
+            # we combine all open context managers thanks to an ExitStack
+            csvwriters = initialize_csvwriters(stack)
+
+            controller = PIController(daemon, rapl_actuators)
+            controller.control(csvwriters)
 
 
 # main script  ################################################################
