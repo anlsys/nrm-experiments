@@ -259,7 +259,6 @@ class PIController:
         timestamp, measures = payload
         timestamp *= 1e-6  # convert µs in s
         for data in measures:
-            # XXX: handle case where we have multiple RaplKey at once
             if data['sensorID'].startswith('RaplKey'):
                 # collect sensors
                 window_duration = timestamp - self.rapl_window_timestamp
@@ -299,6 +298,9 @@ class PIController:
                 # send command to actuator
                 powercap = round(powercap)  # XXX: discretization induced by raplActions
                 enforce_powercap(self.daemon, self.rapl_actuators, powercap)
+
+                # we treat all RAPL packages at once, ignore other RAPL sensors
+                break
 
 
 # helper functions  ###########################################################
