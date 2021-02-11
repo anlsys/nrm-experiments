@@ -1,10 +1,17 @@
-{ hnrmHome, pkgs ? (import (hnrmHome + /default.nix) { }), drv ?
-  (import (hnrmHome + /shell.nix) {
+{
+  pkgs ? (import <hnrm/default.nix> { })
+, drv ?
+  (import <hnrm/shell.nix> {
     inherit pkgs;
     experiment = true;
     analysis = false;
     jupyter = false;
-  }) }:
+  })
+}:
 let xpctl = import ./xpctl.nix;
-in drv.overrideAttrs
-(o: { buildInputs = o.buildInputs ++ [ pkgs.nas ] ++ xpctl pkgs; })
+in drv.overrideAttrs (o: {
+  buildInputs =
+    o.buildInputs
+    ++ [ pkgs.nas ]
+    ++ xpctl pkgs;
+})

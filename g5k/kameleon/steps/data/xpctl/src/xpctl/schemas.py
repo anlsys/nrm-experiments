@@ -15,7 +15,7 @@ import cerberus
 cerberus.Validator.types_mapping['path'] = \
         cerberus.TypeDefinition('path', (pathlib.Path, ), ())
 
-XPCTL_CONF_VERSION = 2  # current version of configuration format
+XPCTL_CONF_VERSION = 3  # current version of configuration format
 
 XPCTL_CONF_SCHEMA = {
     'version': {
@@ -23,28 +23,12 @@ XPCTL_CONF_SCHEMA = {
         'min': 1,
         'required': True,
     },
-    'hnrm': {
-        'type': 'dict',
-        'required': True,
-        'schema': {
-            'home': {
-                'type': 'path',
-                'coerce': pathlib.Path,
-                'required': True,
-            },
-        },
-    },
     'xpctl': {
         'type': 'dict',
         'required': True,
         'schema': {
             'user': {
                 'type': 'string',
-                'required': True,
-            },
-            'confdir': {
-                'type': 'path',
-                'coerce': pathlib.Path,
                 'required': True,
             },
         },

@@ -33,6 +33,7 @@ def forge_run_cmd(*, cmd, user):
                          .pure() \
                          .arg('jupyter', 'true') \
                          .arg('experiment', 'true') \
+                         .path('<hnrm/shell.nix>') \
                          .command(cmd, interactive=False)
 
     runas_cmd = command.ProxyCommand('runuser') \
@@ -42,7 +43,7 @@ def forge_run_cmd(*, cmd, user):
     return runas_cmd
 
 
-def forge_sigint_handler(*, user, hnrm_home):
+def forge_sigint_handler(*, user):
     """Forge a SIGINT handler to cleanly shut down Jupyter."""
 
     def sigint_handler(signum, _):
@@ -55,7 +56,6 @@ def forge_sigint_handler(*, user, hnrm_home):
         )
         subprocess.run(  # ask Jupyter notebook to shutdown
             stop_cmd.build(),
-            cwd=hnrm_home,
             check=False,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
@@ -70,7 +70,6 @@ def forge_sigint_handler(*, user, hnrm_home):
 def launch(params):  # pylint: disable=missing-function-docstring
     stop_jupyter_on_sigint = forge_sigint_handler(
         user=params['config']['xpctl']['user'],
-        hnrm_home=params['config']['hnrm']['home'],
     )
 
     with helpers.signal_handler(signal.SIGINT, stop_jupyter_on_sigint):
@@ -81,7 +80,6 @@ def launch(params):  # pylint: disable=missing-function-docstring
         print(start_cmd.build(), file=sys.stderr)  # XXX: logs
         subprocess.run(
             start_cmd.build(),
-            cwd=params['config']['hnrm']['home'],
             check=False,
             preexec_fn=os.setsid,  # create a dedicated session for processes created by Jupyter
         )

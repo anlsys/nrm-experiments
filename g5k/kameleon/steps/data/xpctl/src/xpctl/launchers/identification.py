@@ -110,7 +110,7 @@ class STREAMParser(BenchmarkCommandParser, benchmarks=('stream_c', )):
     Parsing logic for STREAM benchmark.
     """
 
-    nix_path = pathlib.Path('stream.nix')
+    nix_path = '<xpctl/stream.nix>'
 
     @classmethod
     def dispatch(cls, *, args, bench_cmd, nix_cmd):
@@ -148,7 +148,7 @@ class AMGParser(BenchmarkCommandParser, benchmarks=('amg', )):
     Parsing logic for Algebraic multigrid benchmark (AMG).
     """
 
-    nix_path = pathlib.Path('amg.nix')
+    nix_path = '<xpctl/amg.nix>'
 
     @classmethod
     def dispatch(cls, *, args, bench_cmd, nix_cmd):
@@ -165,10 +165,10 @@ class NPBParser(BenchmarkCommandParser, benchmarks=('ep.A.x', 'ep.B.x', 'ep.C.x'
     Parsing logic for NAS Parallel Benchmarks (NBP).
     """
 
-    nix_path = pathlib.Path('nas.nix')
+    nix_path = '<xpctl/nas.nix>'
 
 
-def forge_run_cmd(*, cmd, runner, user, hnrm_home, plan):
+def forge_run_cmd(*, cmd, runner, user, plan):
     """Forge a command description for `subprocess.run`."""
 
     program, args = cmd[0], cmd[1:]
@@ -177,8 +177,7 @@ def forge_run_cmd(*, cmd, runner, user, hnrm_home, plan):
 
     # prepare nix_cmd with common arguments
     nix_cmd = command.NixShellCommand() \
-            .pure() \
-            .arg('hnrmHome', hnrm_home)
+            .pure()
 
     # assign arguments to relevant commands
     args_dispatcher = BenchmarkCommandParser.by_name(program)
@@ -223,12 +222,10 @@ def launch(params):  # pylint: disable=missing-function-docstring
         cmd=params['cmd'],
         runner=params['config']['runners']['identification'],
         user=params['config']['xpctl']['user'],
-        hnrm_home=params['config']['hnrm']['home'],
         plan=params['plan'],
     )
     print(start_cmd.build(), file=sys.stderr)  # XXX: logs
     subprocess.run(
         start_cmd.build(),
-        cwd=params['config']['xpctl']['confdir'],
         check=True,
     )
