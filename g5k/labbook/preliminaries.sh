@@ -151,8 +151,17 @@ function run {
 		snapshot_system_state "${archive}" 'pre'
 
 		# run benchmark
-		xpctl identification --experiment-plan="${plan}" -- \
+		if xpctl identification --experiment-plan="${plan}" -- \
 			"${BENCHMARK}" --iterationCount="${ITERATION_COUNT}" --problemSize="${PROBLEM_SIZE}"
+		then
+			# identify execution as successful
+			touch "${LOGDIR}/SUCCESS"
+			tar --append --file="${archive}" --directory="${LOGDIR}" -- SUCCESS
+		else
+			# identify execution as failed
+			touch "${LOGDIR}/FAIL"
+			tar --append --file="${archive}" --directory="${LOGDIR}" -- FAIL
+		fi
 
 		# retrieve benchmark logs and snapshot post-run state
 		tar --append --file="${archive}" --directory="${LOGDIR}" -- "${POSTRUN_SNAPSHOT_FILES[@]}"
