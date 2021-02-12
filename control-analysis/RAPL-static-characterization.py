@@ -25,13 +25,13 @@ import tarfile
 # Experiment selection and load data
 # =============================================================================
 # Getting the right paths
-experiment_date = '2021-01-26' # ex: '2020-11-20' '2021-01-22'
-experiment_type = 'identification' # ex: 'preliminaries' 'identification'
-experiment_dir = os.getcwd()+'/Documents/working-documents/data/hnrm-experiments-master-g5k-data-'+experiment_date+'_'+experiment_type+'/g5k/data/'+experiment_date+'_'+experiment_type+'/'
+experiment_date = '2021-02-05' # ex: '2020-11-20' '2021-01-22'
+experiment_type = 'controller' # ex: 'preliminaries' 'identification'
+experiment_dir = os.getcwd()+'/Documents/ctrl-rapl/working-documents/data/hnrm-experiments-master-g5k-data-'+experiment_date+'_'+experiment_type+'/g5k/data/'+experiment_date+'_'+experiment_type+'/'
 clusters = next(os.walk(experiment_dir))[1] # clusters are name of folders
 # Remove input configuration files from cluster list (in identification experiments) 
-if experiment_type == 'identification':
-    clusters.remove('inputs')
+#if experiment_type == 'identification':
+#    clusters.remove('inputs')
 traces = pd.DataFrame()
 for cluster in clusters:
     # Extracting tar folders, if not already done
@@ -54,10 +54,11 @@ for cluster in clusters:
         data[cluster][trace] = {}
         folder_path = experiment_dir+cluster+'/'+trace
         # Trace experimental plan: parameters or log
-        with open(folder_path+"/parameters.yaml") as file:
-            data[cluster][trace]['parameters'] = yaml.load(file, Loader=yaml.FullLoader)
-        if experiment_type == 'identification':
-            data[cluster][trace]['identification-runner-log'] = pd.read_csv(folder_path+"/identification-runner.log", sep = '\0', names = ['created','levelname','process','funcName','message'])
+        if experiment_type == 'preliminaries':
+            with open(folder_path+"/parameters.yaml") as file:
+                data[cluster][trace]['parameters'] = yaml.load(file, Loader=yaml.FullLoader)
+        if experiment_type == 'controller': #identification
+            data[cluster][trace]['identification-runner-log'] = pd.read_csv(folder_path+"/"+experiment_type+"-runner.log", sep = '\0', names = ['created','levelname','process','funcName','message'])
             data[cluster][trace]['enforce_powercap'] = data[cluster][trace]['identification-runner-log'][data[cluster][trace]['identification-runner-log']['funcName'] == 'enforce_powercap']
             data[cluster][trace]['enforce_powercap'] = data[cluster][trace]['enforce_powercap'].set_index('created')
             levels = [''.join(c for c in data[cluster][trace]['enforce_powercap']['message'][i] if c.isdigit()) for i in data[cluster][trace]['enforce_powercap'].index]
@@ -153,14 +154,16 @@ for cluster in clusters:
         data[cluster][trace]['aggregated_values']['upsampled_timestamps']  = data[cluster][trace]['aggregated_values']['upsampled_timestamps'].sort_values(by=0)
         data[cluster][trace]['aggregated_values']['upsampled_timestamps'] = data[cluster][trace]['aggregated_values']['upsampled_timestamps'].set_index(0)
         # Computing count and frequency at upsampled_frequency:
-        data[cluster][trace]['aggregated_values']['progress_frequency_at_rapl_rate'] = pd.DataFrame({'frequency':np.mean(data[cluster][trace]['aggregated_values']['performance_frequency']['frequency'].where(data[cluster][trace]['aggregated_values']['performance_frequency'].index<= data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[0],0)),'timestamp':data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[0]}, index=[0])
+        data[cluster][trace]['aggregated_values']['progress_frequency_mean'] = pd.DataFrame({'mean':np.mean(data[cluster][trace]['aggregated_values']['performance_frequency']['frequency'].where(data[cluster][trace]['aggregated_values']['performance_frequency'].index<= data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[0],0)),'timestamp':data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[0]}, index=[0])
+        data[cluster][trace]['aggregated_values']['progress_frequency_median'] = pd.DataFrame({'median':np.nanmedian(data[cluster][trace]['aggregated_values']['performance_frequency']['frequency'].where(data[cluster][trace]['aggregated_values']['performance_frequency'].index<= data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[0],0)),'timestamp':data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[0]}, index=[0])
         data[cluster][trace]['aggregated_values']['progress_count'] = pd.DataFrame({'count':sum(data[cluster][trace]['performance_sensors']['progress'].where(data[cluster][trace]['performance_sensors'].index<= data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[0],0)),'timestamp':data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[0]}, index=[0])
         idx = 0  # index of powercap change in log
         data[cluster][trace]['aggregated_values']['pcap'] = pd.DataFrame({'pcap':math.nan,'timestamp':data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[0]}, index=[0])
         for t in range(1,len(data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index)):
              data[cluster][trace]['aggregated_values']['progress_count'] = data[cluster][trace]['aggregated_values']['progress_count'].append({'count':sum(data[cluster][trace]['performance_sensors']['progress'].where((data[cluster][trace]['performance_sensors'].index>= data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[t-1]) & (data[cluster][trace]['performance_sensors'].index <=data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[t]),0)),'timestamp':data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[t]}, ignore_index=True)
-             data[cluster][trace]['aggregated_values']['progress_frequency_at_rapl_rate'] = data[cluster][trace]['aggregated_values']['progress_frequency_at_rapl_rate'].append({'frequency':np.mean(data[cluster][trace]['aggregated_values']['performance_frequency']['frequency'].where((data[cluster][trace]['aggregated_values']['performance_frequency'].index>= data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[t-1]) & (data[cluster][trace]['aggregated_values']['performance_frequency'].index <=data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[t]))),'timestamp':data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[t]}, ignore_index=True)
-             if experiment_type == 'identification':
+             data[cluster][trace]['aggregated_values']['progress_frequency_mean'] = data[cluster][trace]['aggregated_values']['progress_frequency_mean'].append({'mean':np.mean(data[cluster][trace]['aggregated_values']['performance_frequency']['frequency'].where((data[cluster][trace]['aggregated_values']['performance_frequency'].index>= data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[t-1]) & (data[cluster][trace]['aggregated_values']['performance_frequency'].index <=data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[t]))),'timestamp':data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[t]}, ignore_index=True)
+             data[cluster][trace]['aggregated_values']['progress_frequency_median'] = data[cluster][trace]['aggregated_values']['progress_frequency_median'].append({'median':np.nanmedian(data[cluster][trace]['aggregated_values']['performance_frequency']['frequency'].where((data[cluster][trace]['aggregated_values']['performance_frequency'].index>= data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[t-1]) & (data[cluster][trace]['aggregated_values']['performance_frequency'].index <=data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[t]))),'timestamp':data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[t]}, ignore_index=True)
+             if experiment_type == 'controller': #identification
                  if (data[cluster][trace]['enforce_powercap'].index[idx]-data[cluster][trace]['first_sensor_point'])<data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[t]:
                      if idx < len(data[cluster][trace]['enforce_powercap'])-1:           
                          idx = idx +1
@@ -172,21 +175,32 @@ for cluster in clusters:
                      data[cluster][trace]['aggregated_values']['pcap'] = data[cluster][trace]['aggregated_values']['pcap'].append({'pcap':int(data[cluster][trace]['enforce_powercap']['powercap'].iloc[idx-1]),'timestamp':data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[t]}, ignore_index=True)
         data[cluster][trace]['aggregated_values']['progress_count'] = data[cluster][trace]['aggregated_values']['progress_count'].set_index('timestamp')
         data[cluster][trace]['aggregated_values']['pcap'] = data[cluster][trace]['aggregated_values']['pcap'].set_index('timestamp')
-        data[cluster][trace]['aggregated_values']['progress_frequency_at_rapl_rate'] = data[cluster][trace]['aggregated_values']['progress_frequency_at_rapl_rate'].set_index('timestamp')
+        if experiment_type == 'preliminaries': 
+            data[cluster][trace]['aggregated_values']['pcap'] = pd.DataFrame({'pcap':data[cluster][trace]['parameters']['powercap'],'timestamp':data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[0]}, index=[0])
+            for t in range(1,len(data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index)):
+                data[cluster][trace]['aggregated_values']['pcap'] = data[cluster][trace]['aggregated_values']['pcap'].append({'pcap':data[cluster][trace]['parameters']['powercap'],'timestamp':data[cluster][trace]['aggregated_values']['upsampled_timestamps'].index[t]}, ignore_index=True)
+            data[cluster][trace]['aggregated_values']['pcap'] = data[cluster][trace]['aggregated_values']['pcap'].set_index('timestamp')
+        data[cluster][trace]['aggregated_values']['progress_frequency_mean'] = data[cluster][trace]['aggregated_values']['progress_frequency_mean'].set_index('timestamp')
+        data[cluster][trace]['aggregated_values']['progress_frequency_median'] = data[cluster][trace]['aggregated_values']['progress_frequency_median'].set_index('timestamp')
         data[cluster][trace]['aggregated_values']['average_progress_count'] = data[cluster][trace]['aggregated_values']['progress_count'].mean()[0]
+        window_size = 1
+        data[cluster][trace]['aggregated_values']['progress_frequency_sliding_window'] = pd.DataFrame({'slinging_window':np.nanmedian(data[cluster][trace]['aggregated_values']['performance_frequency']['frequency'].where(data[cluster][trace]['aggregated_values']['performance_frequency'].index<= window_size,0)),'timestamp':window_size}, index=[0])
+        for t_hb in range(len(data[cluster][trace]['aggregated_values']['performance_frequency'].loc[:1])+1,len(data[cluster][trace]['aggregated_values']['performance_frequency'].index)):
+            data[cluster][trace]['aggregated_values']['progress_frequency_sliding_window'] = data[cluster][trace]['aggregated_values']['progress_frequency_sliding_window'].append({'slinging_window':np.nanmedian(data[cluster][trace]['aggregated_values']['performance_frequency']['frequency'].where((data[cluster][trace]['aggregated_values']['performance_frequency'].index>= (data[cluster][trace]['aggregated_values']['performance_frequency'].index[t_hb]-window_size)) & (data[cluster][trace]['aggregated_values']['performance_frequency'].index <=data[cluster][trace]['aggregated_values']['performance_frequency'].index[t_hb]))),'timestamp':data[cluster][trace]['aggregated_values']['performance_frequency'].index[t_hb]}, ignore_index=True)
+        data[cluster][trace]['aggregated_values']['progress_frequency_sliding_window'] = data[cluster][trace]['aggregated_values']['progress_frequency_sliding_window'].set_index('timestamp')   
 
 # =============================================================================
 # Save and load processed data
 # =============================================================================
 # Save
 def save_obj(obj, name ):
-    with open(os.getcwd()+'/Documents/working-documents/data/'+ name + '.pkl', 'wb') as f:
+    with open(os.getcwd()+'/Documents/ctrl-rapl/working-documents/data/'+ name + '.pkl', 'wb') as f:
         pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL) 
 #save_obj(data,experiment_date)
 
 # Load 
 def load_obj(name ):
-    with open(os.getcwd()+'/Documents/working-documents/data/' + name + '.pkl', 'rb') as f:
+    with open(os.getcwd()+'/Documents/ctrl-rapl/working-documents/data/' + name + '.pkl', 'rb') as f:
         return pickle.load(f)
 #data = load_obj(experiment_date)
 
@@ -194,8 +208,13 @@ def load_obj(name ):
 # ================================== PLOTS ====================================
 # =============================================================================
 # Global configuration
-clusters_styles = {clusters[0]:'peru',clusters[1]:'forestgreen',clusters[2]:'cornflowerblue'}
+#clusters_styles = {clusters[0]:'peru',clusters[1]:'forestgreen',clusters[2]:'cornflowerblue'}
+#clusters_styles = {clusters[0]:'black',clusters[1]:'orange',clusters[2]:'skyblue'}
+clusters_styles = {'gros':'orange'}
+#clusters_markers = {clusters[0]:'o',clusters[1]:'x',clusters[2]:'v'}
+clusters_markers = {'gros':'x'}
 TDP = {'yeti':125,'dahu':125,'gros':125} # thermal dissipation power, in W
+plt.rcParams.update({'font.size': 14})
 pmin = 40
 pmax = 120
 
@@ -203,9 +222,9 @@ pmax = 120
 # Progress and Power over Time
 # =============================================================================
 # Choose a cluster and a trace
-cluster = 'yeti'
+cluster = 'gros'
 requested_pcap = 50
-experiment_plan = 'step_50-70.yaml' # 'step_110-130.yaml' 
+experiment_plan = 'step_70-90.yaml' # 'step_110-130.yaml' 
 for trace in traces[cluster]:
     if experiment_type == 'preliminaries':
         if requested_pcap == data[cluster][trace]['parameters']['powercap']:
@@ -213,20 +232,34 @@ for trace in traces[cluster]:
     if experiment_type == 'identification':
         if experiment_plan == data[cluster][trace]['parameters']['experiment-plan']:
             my_trace = trace
-            
+
+my_trace = 'setpoint50'
+K_L=25
+setpoint=K_L*int(my_trace[8:10])/100
+
 #my_traces = [traces[cluster][3], traces[cluster][7], traces[cluster][8]]
 
     # PLOT
-x_zoom = [0,90]
-fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(6.6,6.6))
+x_zoom = [0,len(data[cluster][my_trace]['aggregated_values']['pcap'])]
+fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(5.7,6.6))
 #fig.suptitle(data[cluster][my_trace]['parameters']['benchmark']+', Pcap='+str(data[cluster][my_trace]['parameters']['powercap'])+'W')
+#fig.suptitle(my_trace)
 #for my_trace in my_traces:
 #data[cluster][my_trace]['nrm_downstream_sensors']['downstream'].plot(color='peru',ax=axes[0], style=".", markersize=2)
-data[cluster][my_trace]['aggregated_values']['performance_frequency'].plot(color='darkblue',ax=axes[0], style=".", markersize=2)
-data[cluster][my_trace]['aggregated_values']['progress_frequency_at_rapl_rate'].plot(color='cornflowerblue',ax=axes[0], marker="d", markersize=3)
-axes[0].set_ylabel('Progress (heartbeat frequency in Hz)')
+#data[cluster][my_trace]['aggregated_values']['performance_frequency'].plot(color='darkblue',ax=axes[0], style=".", markersize=2)
+#data[cluster][my_trace]['aggregated_values']['progress_frequency_sliding_window'].plot(color='b',ax=axes[0], style=".-", markersize=2)
+data[cluster][my_trace]['aggregated_values']['progress_frequency_median']['median'].plot(color=clusters_styles[cluster],ax=axes[0], marker=clusters_markers[cluster], markersize=5)
+#data[cluster][my_trace]['aggregated_values']['progress_frequency_mean'].plot(color='b',ax=axes[0], marker="d", markersize=3)
+axes[0].axhline(y=setpoint, color='lightcoral', linestyle='-')
+axes[0].axhline(y=setpoint*1.05, color='lightcoral', linestyle=':')
+axes[0].axhline(y=setpoint*0.95, color='lightcoral', linestyle=':')
+axes[0].set_ylabel('Progress (in Hz)')
+axes[0].set_xlabel('')
+#axes[0].legend(['cluster: '+cluster])
+axes[0].legend(['Measure','Objective value','Objective value ±5%'],fontsize='small')
+#axes[0].legend([])
 #axes[0].legend(['Heartrate','Averaged Heartrate ('+str(my_trace)+')'],fontsize='small',ncol=1)#
-axes[0].set_ylim([0,100])
+#axes[0].set_ylim([22,25])
 axes[0].set_xlim(x_zoom)
 axes[0].grid(True)
 #for my_trace in my_traces:
@@ -234,15 +267,15 @@ if experiment_type == 'preliminaries':
     axes[1].axhline(y=data[cluster][my_trace]['parameters']['powercap'], color='lightcoral', linestyle='-')
 else:
     data[cluster][my_trace]['aggregated_values']['pcap'].plot(color='k',ax=axes[1], style=".")#, style="+",  markersize=4)
-data[cluster][my_trace]['rapl_sensors']['value0'].plot(color='forestgreen',ax=axes[1], style="+")#, style="+",  markersize=4)
-data[cluster][my_trace]['rapl_sensors']['value1'].plot(color='limegreen',ax=axes[1], style="+",  markersize=2)
-data[cluster][my_trace]['rapl_sensors']['value2'].plot(color='darkolivegreen',ax=axes[1], style="-")#, style="+",  markersize=4)
-data[cluster][my_trace]['rapl_sensors']['value3'].plot(color='lightgreen',ax=axes[1], style="-")#, style="+",  markersize=4)
+data[cluster][my_trace]['rapl_sensors']['value0'].plot(color='palevioletred',ax=axes[1], style="+")#, style="+",  markersize=4)
+data[cluster][my_trace]['rapl_sensors']['value1'].plot(color='palevioletred',ax=axes[1], style="+",  markersize=2)
+data[cluster][my_trace]['rapl_sensors']['value2'].plot(color='palevioletred',ax=axes[1], style="-")#, style="+",  markersize=4)
+data[cluster][my_trace]['rapl_sensors']['value3'].plot(color='palevioletred',ax=axes[1], style="-")#, style="+",  markersize=4)
 #axes[1].axhline(y=TDP[cluster], color='black', linestyle=':')
 axes[1].set_ylabel('Power (in W)')
 axes[1].set_xlabel('Time (in s)')
-#axes[1].set_ylim([60,100])
-axes[1].legend(['powercap','measure package0','measure package1'],fontsize='small',ncol=1)
+axes[1].set_ylim([30,130])
+axes[1].legend(['Powercap','Measure'],fontsize='small',ncol=1) # ,'Measure - package1'
 axes[1].grid(True)
 axes[1].set_xlim(x_zoom)
 #for my_trace in my_traces:
@@ -258,11 +291,15 @@ axes[1].set_xlim(x_zoom)
     # Save
 #plt.savefig(os.getcwd()+'/Documents/working-documents/figures/'+experiment_date+'/frequency_rapls_count_vs_time_'+cluster+'-'+str(data[cluster][my_trace]['parameters']['powercap'])+'W.pdf')
 #plt.savefig(os.getcwd()+'/Documents/working-documents/figures/'+experiment_date+'/frequency_rapls_count_vs_time_'+cluster+'-identification-'+str(my_trace)+'W.pdf')
+#plt.savefig(os.getcwd()+'/Documents/ctrl-rapl/working-documents/figures/'+experiment_date+'/heartrate-frequency_power_vs_time_'+cluster+'-identification-'+data[cluster][trace]['parameters']['experiment-plan'][:-5]+'W.pdf')
+#plt.savefig(os.getcwd()+'/Documents/ctrl-rapl/working-documents/figures/'+experiment_date+'/heartrate-frequency_power_pcap_vs_time_'+cluster+'-identification-'+trace+'.pdf')
+plt.savefig(os.getcwd()+'/Documents/ctrl-rapl/working-documents/figures/'+experiment_date+'/progress_power_pcap_vs_time_'+cluster+'-control-'+my_trace+'.pdf')
 
 
 # =============================================================================
 # RAPL actuator - Frequencies
 # =============================================================================
+# From '2021-01-26'
 my_trace = '100Hz' # ex: '1000Hz' '100Hz' '50Hz'
 fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(6.6,6.6))
 fig.suptitle('Required frequency: '+str(my_trace))
@@ -374,27 +411,36 @@ for cluster in clusters:
     axes.set_ylim([0,155])
         
         # Save
-    plt.savefig(os.getcwd()+'/Documents/working-documents/figures/'+experiment_date+'/rapls_actuator_through_time'+cluster+'-'+str(requested_pcaps)+'W.pdf')
+    #plt.savefig(os.getcwd()+'/Documents/working-documents/figures/'+experiment_date+'/rapls_actuator_through_time'+cluster+'-'+str(requested_pcaps)+'W.pdf')
     
 # =============================================================================
-# Static Characteristic: Progress vs Power 
+# Static Characteristic
 # =============================================================================
 # Selecting relevant data, modeling
 sc = {}
 sc_requested = {}
 power2perf_model = {}
+pcap2perf_model = {}
 power2perf_params = {}
+power2perf_params_onlyalpha = {}
+power2perf_params_onlyperfinf = {}
 power2perf_parameters = {}
 r_squared = {}
 alpha = 0.04 # to find automatically
+power_0 = 30
+
+selected_traces = traces.drop([0, 1, 2, 4, 6, 9, 10, 12, 13, 14, 15, 16, 18,19,20])
+
 elected_performance_sensor = 'average_performance_frequency' # choose between: 'average_performance_periods' 'average_progress_count' 'average_performance_frequency'
 for cluster in clusters:
-    sc[cluster] = pd.DataFrame([data[cluster][trace]['aggregated_values'][elected_performance_sensor] for trace in traces[cluster]], index=[data[cluster][trace]['aggregated_values']['rapls'] for trace in traces[cluster]], columns=[elected_performance_sensor])
+    sc[cluster] = pd.DataFrame([data[cluster][trace]['aggregated_values'][elected_performance_sensor] for trace in selected_traces[cluster]], index=[data[cluster][trace]['aggregated_values']['rapls'] for trace in selected_traces[cluster]], columns=[elected_performance_sensor])
     sc[cluster].sort_index(inplace=True)
     if experiment_type == 'preliminaries':
-        sc_requested[cluster] = pd.DataFrame([data[cluster][trace]['aggregated_values'][elected_performance_sensor] for trace in traces[cluster]], index=[data[cluster][trace]['parameters']['powercap'] for trace in traces[cluster]], columns=[elected_performance_sensor])
+        sc_requested[cluster] = pd.DataFrame([data[cluster][trace]['aggregated_values'][elected_performance_sensor] for trace in selected_traces[cluster]], index=[data[cluster][trace]['parameters']['powercap'] for trace in selected_traces[cluster]], columns=[elected_performance_sensor])
+    elif experiment_type == 'controller':
+        sc_requested[cluster] = pd.DataFrame([data[cluster][trace]['aggregated_values'][elected_performance_sensor] for trace in selected_traces[cluster]], index=[data[cluster][trace]['aggregated_values']['pcap'].mean()[0] for trace in selected_traces[cluster]], columns=[elected_performance_sensor])
     else:
-        sc_requested[cluster] = pd.DataFrame([data[cluster][trace]['aggregated_values'][elected_performance_sensor] for trace in traces[cluster]], index=[data[cluster][trace]['aggregated_values']['pcap'] for trace in traces[cluster]], columns=[elected_performance_sensor])
+        sc_requested[cluster] = pd.DataFrame([data[cluster][trace]['aggregated_values'][elected_performance_sensor] for trace in selected_traces[cluster]], index=[data[cluster][trace]['aggregated_values']['pcap'] for trace in selected_traces[cluster]], columns=[elected_performance_sensor])
     sc_requested[cluster].sort_index(inplace=True)
     #power2perf_model[cluster] = [sc[cluster].at[max(sc[cluster].index),elected_performance_sensor]*(1-math.exp(-alpha*(i-min(sc[cluster].index)))) for i in sc[cluster].index] # final value:supposed to be known ?
     power2perf_model[cluster] = [(sc[cluster].at[sc[cluster].index[-1],elected_performance_sensor]+sc[cluster].at[sc[cluster].index[-2],elected_performance_sensor]+sc[cluster].at[sc[cluster].index[-3],elected_performance_sensor])/3*(1-math.exp(-alpha*(i-min(sc[cluster].index)))) for i in sc[cluster].index] # mean over last 3 values:  supposed to be known ?
@@ -403,19 +449,32 @@ for cluster in clusters:
         power_0 =  min(sc[cluster].index)
         return perf_inf*(1-np.exp(-alpha*(power-power_0)))
 
+def power2perf_onlyperfinf(power, perf_inf): # Cluster specific model (only Perf_inf is optimally found)
+        alpha = 0.04
+        power_0 = 30 #min(sc[cluster].index)
+        return perf_inf*(1-np.exp(-alpha*(power-power_0)))
+
 def power2perf(power, alpha, perf_inf, power_0): # general model formulation
     return perf_inf*(1-np.exp(-alpha*(power-power_0)))
+
+def pcap2perf(pcap, a, b, perf_inf, alpha, power_0): # general model formulation
+    return perf_inf*(1-np.exp(-alpha*(a*pcap+b-power_0)))
 
 # Model optimisation 
 for cluster in clusters:
     power2perf_param0 = [0.04, (sc[cluster].at[sc[cluster].index[-1],elected_performance_sensor]+sc[cluster].at[sc[cluster].index[-2],elected_performance_sensor]+sc[cluster].at[sc[cluster].index[-3],elected_performance_sensor])/3, min(sc[cluster].index)]                                        # guessed params
     power2perf_param_opt, power2perf_param_cov = opt.curve_fit(power2perf, sc[cluster].index, sc[cluster][elected_performance_sensor], p0=power2perf_param0)     
+    power2perf_params[cluster] = power2perf_param_opt
     power2perf_onlyalpha_param_opt, power2perf_onlyalpha_param_cov = opt.curve_fit(power2perf_onlyalpha, sc[cluster].index, sc[cluster][elected_performance_sensor], p0=alpha)
-    power2perf_params[cluster] = power2perf_onlyalpha_param_opt[0]
+    power2perf_params_onlyalpha[cluster] = power2perf_onlyalpha_param_opt[0]
+    power2perf_onlyperfinf_param_opt, power2perf_onlyperfinf_param_cov = opt.curve_fit(power2perf_onlyperfinf, sc[cluster].index, sc[cluster][elected_performance_sensor], p0=1)
+    power2perf_params_onlyperfinf[cluster] = power2perf_onlyperfinf_param_opt[0]
     # Model
     #power2perf_model[cluster] = power2perf(sc[cluster].index, *power2perf_param_opt) # model with optimization of all parameters
-    #power2perf_model[cluster] = power2perf_onlyalpha(sc[cluster].index, *power2perf_onlyalpha_param_opt) # model with optimizd alpha
-    power2perf_model[cluster] = power2perf_onlyalpha(sc[cluster].index, 0.04) # model with fixed alpha
+    #power2perf_model[cluster] = power2perf_onlyalpha(sc[cluster].index, *power2perf_onlyalpha_param_opt) # model with optimized alpha
+    #power2perf_model[cluster] = power2perf_onlyalpha(sc[cluster].index, 0.04) # model with fixed alpha
+    power2perf_model[cluster] = power2perf_onlyperfinf(sc[cluster].index, *power2perf_onlyperfinf_param_opt) # model with optimized perfinf
+    pcap2perf_model[cluster] = pcap2perf(sc_requested[cluster].index, power_parameters[cluster][0], power_parameters[cluster][1], power2perf_params_onlyperfinf[cluster], alpha, power2perf_params[cluster][2]) # model with optimized perfinf
     # Equations taken from https://en.wikipedia.org/wiki/Coefficient_of_determination : "proportion of the variance in the dependent variable that is predictable from the independent variable"
     residuals = sc[cluster][elected_performance_sensor] - power2perf_model[cluster]
     ss_res = np.sum(residuals**2)
@@ -423,37 +482,87 @@ for cluster in clusters:
     r_squared[cluster] = 1 - (ss_res / ss_tot)
     print(cluster)
     print(r_squared[cluster])
+    
 
-# PLOT
+# PLOT: Progress vs Power 
 fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(6.6,6.6))
 #fig.suptitle('Static Characteristic - Performance vs Measured and requested Power')
 for cluster in clusters:
-    #sc[cluster][elected_performance_sensor].plot(color=clusters_styles[cluster],marker="x") # power vs. measured progress
-    #sc_requested[cluster][elected_performance_sensor].plot(color=clusters_styles[cluster],marker="o",linestyle=':') # requested power vs measured progress
-    plt.plot(sc[cluster].index,power2perf_model[cluster])#,color=clusters_styles[cluster]) # power vs. modelled progress
-    # Plot linearized static characteristic:
+    # Power 
+    sc[cluster][elected_performance_sensor].plot(color=clusters_styles[cluster],marker="x") # power vs. measured progress
+    #plt.plot(sc[cluster].index,power2perf_model[cluster])#,color=clusters_styles[cluster]) # power vs. modelled progress
+    # Pcap
+    #sc_requested[cluster][elected_performance_sensor].plot(color=clusters_styles[cluster],marker=clusters_markers[cluster],linestyle=':') # pcap vs measured progress
+    #plt.plot(sc_requested[cluster].index,pcap2perf_model[cluster],color=clusters_styles[cluster]) # pcap vs. modelled progress
+    # Linear Power
     #plt.plot(-np.exp(-0.04*(sc[cluster].index-min(sc[cluster].index))),sc[cluster][elected_performance_sensor],color=clusters_styles[cluster], marker="+",linestyle='') # data (lin with fixed alpha = 0.04)
-    #plt.plot(-np.exp(-0.04*(sc[cluster].index-min(sc[cluster].index))),power2perf_model[cluster],color=clusters_styles[cluster]) # model 0.04
+    #plt.plot(-np.exp(-alpha*(sc[cluster].index-power_0)),power2perf_model[cluster],color=clusters_styles[cluster]) # model 0.04
+    # Linear Pcap
+    #plt.plot(-np.exp(-alpha*(power_parameters[cluster][0]*sc_requested[cluster].index+power_parameters[cluster][1]-power2perf_params[cluster][2])),sc_requested[cluster][elected_performance_sensor]-power2perf_params_onlyperfinf[cluster],color=clusters_styles[cluster], marker=clusters_markers[cluster],linestyle=':') # data (lin with fixed alpha = 0.04)
+    #plt.plot(-np.exp(-alpha*(power_parameters[cluster][0]*sc_requested[cluster].index+power_parameters[cluster][1]-power2perf_params[cluster][2])),pcap2perf_model[cluster]-power2perf_params_onlyperfinf[cluster],color=clusters_styles[cluster]) # model 0.04
 axes.grid(True)
-axes.set_ylabel('Performance ('+elected_performance_sensor+')')
-axes.set_xlabel('Power (in W)')
-axes.set_xlabel('Linearized Power: $-exp^{-0.04(power-30)}$')
+axes.set_ylabel('Progress (in Hz)')#('Performance ('+elected_performance_sensor+')')
+axes.set_ylabel('Linearized Progress (in Hz)')
+axes.set_xlabel('Powercap (in W)')
+axes.set_xlabel('Linearized Powercap (unitless)')
 #axes.set_yscale('log')
 #axes.set_xscale('log')
+#axes.set_xlim([40,120])
+#axes.set_xlim([-1,0])
+#axes.set_ylim([-80,0])
 legend = []
 for cluster in clusters:
     #legend += [cluster+' - measured']
     #legend += [cluster+' - requested']
     #legend += [cluster+' - model, alpha='+str(power2perf_params[cluster])]
-    legend += [cluster+' - measurements, $R^2$='+str(r_squared[cluster])]
-    legend += [cluster+' - model, alpha=0.04']
-axes.legend(legend,fontsize='small',loc='upper left',ncol=1)
+    legend += ['cluster: '+cluster+' - measures']
+    legend += ['cluster: '+cluster+' - model']
+axes.legend(legend,fontsize='small',loc='lower right',ncol=1)
 
     # Save
 #plt.savefig(os.getcwd()+'/Documents/working-documents/figures/'+experiment_date+'/SC_'+elected_performance_sensor+'vs_rapls_requested_pcap_with_model_alpha'+str(alpha)+'.pdf')
 #plt.savefig(os.getcwd()+'/Documents/working-documents/figures/'+experiment_date+'/SC_'+elected_performance_sensor+'vs_rapls_requested_pcap.pdf')
 #plt.savefig(os.getcwd()+'/Documents/working-documents/figures/'+experiment_date+'/SC_'+elected_performance_sensor+'_vs_linearized_pcap_004.pdf')
+plt.savefig(os.getcwd()+'/Documents/ctrl-rapl/working-documents/figures/'+experiment_date+'/SC_linlin_'+elected_performance_sensor+'_vs_pcap_opt_a-b-perfinf-power0.pdf')
 
+# =============================================================================
+#                       Controller Pareto Front
+# =============================================================================
+# init
+selected_traces = traces.drop([0, 1, 2, 4, 6, 9, 10, 12, 13, 14, 15, 16, 18,19,20])
+pareto = {}
+power_without_control = {}
+progress_without_control = {}
+exectime_without_control = {}
+    
+    # select data   
+for cluster in clusters:
+    for trace in selected_traces[cluster]:
+        data[cluster][trace]['aggregated_values']['energy'] = np.nansum([np.nansum([data[cluster][trace]['rapl_sensors']['value'+str(package_number)].iloc[i+1]*data[cluster][trace]['aggregated_values']['rapls_periods'].iloc[i][0] for i in range(0,len(data[cluster][trace]['aggregated_values']['rapls_periods'].index))]) for package_number in range(0,4)])
+    power_without_control[cluster] = data[cluster]['setpoint100']['aggregated_values']['energy']/10**3#TDP[cluster] # SC: change with power without pcap
+    exectime_without_control[cluster] = data[cluster]['setpoint100']['aggregated_values']['progress_frequency_median']['median'].index[-1]
+    progress_without_control[cluster] = K_L # SC: change with perf without pcap
+    # energy vs mean progress
+    #pareto[cluster] = pd.DataFrame([(1-data[cluster][trace]['aggregated_values']['energy']/10**3/power_without_control[cluster])*100 for trace in selected_traces[cluster]], index=[data[cluster][trace]['aggregated_values']['progress_frequency_median']['median'].mean()/progress_without_control[cluster]*100 for trace in selected_traces[cluster]], columns=['Power savings'])
+    #pareto[cluster] = pd.DataFrame([data[cluster][trace]['aggregated_values']['energy']/10**3 for trace in selected_traces[cluster]], index=[data[cluster][trace]['aggregated_values']['progress_frequency_median']['median'].mean()/progress_without_control[cluster]*100 for trace in selected_traces[cluster]], columns=['Power savings'])
+    # energy vs execution time
+    pareto[cluster] = pd.DataFrame([data[cluster][trace]['aggregated_values']['progress_frequency_median']['median'].index[-1] for trace in selected_traces[cluster]], index=[data[cluster][trace]['aggregated_values']['energy']/10**3 for trace in selected_traces[cluster]], columns=['Power savings'])
+    #pareto[cluster] = pd.DataFrame([(data[cluster][trace]['aggregated_values']['progress_frequency_median']['median'].index[-1]-exectime_without_control[cluster])/exectime_without_control[cluster]*100 for trace in selected_traces[cluster]], index=[(1-data[cluster][trace]['aggregated_values']['energy']/10**3/power_without_control[cluster])*100  for trace in selected_traces[cluster]], columns=['Power savings'])
+    pareto[cluster].sort_index(inplace=True)    
+
+# PLOT : pareto front (Power gain vs Performance Gain)  
+fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(6.6,6.6))
+for cluster in clusters: 
+    pareto[cluster]['Power savings'].plot(color=clusters_styles[cluster],marker="X",linestyle='') 
+axes.legend(['cluster: '+cluster],ncol=1)
+axes.grid(True)
+axes.set_ylabel('Execution time (in s)')#'Execution time increase (in %)') #'Energy savings (in %)' 'Energy consumption (in kJ)' 'Execution time (in s)'
+axes.set_xlabel('Energy consumption (in kJ)') # 'Performance preservation (in %)' 'Energy savings (in %)'
+axes.set_xlim([0,35])
+axes.set_ylim([0,400])
+
+ # Save
+plt.savefig(os.getcwd()+'/ctrl-rapl/working-documents/figures/'+experiment_date+'/pareto_exectime_vs_energy_'+cluster+'.pdf')
 
 # =============================================================================
 # Execution time vs. power
@@ -500,9 +609,12 @@ for elected_performance_sensor in ['average_performance_periods','average_progre
     traces_yeti_without30=traces[cluster].drop(2)
     print(np.corrcoef([data[cluster][trace]['aggregated_values']['execution_time'] for trace in traces_yeti_without30], [data[cluster][trace]['aggregated_values'][elected_performance_sensor] for trace in traces_yeti_without30]))
 
+
 # =============================================================================
-#                               Identification
+#                           Dynamic Identification
 # =============================================================================
+
+    # TOOLBOX
 # https://python-control.readthedocs.io/en/0.8.3/index.html
 #rsys = ctl.era(YY, m, n, nin, nout, r)
 #ctl.frd(d, w)
@@ -512,3 +624,126 @@ for elected_performance_sensor in ['average_performance_periods','average_progre
 #ctl.model()
 # https://web.math.princeton.edu/~cwrowley/python-control/index.html
 # git clone https://github.com/python-control/python-control.git
+
+# Requires a trace with a step increase in powercap
+# Identifying time constant
+if experiment_type == 'identification':
+    step_time = (data[cluster][my_trace]['enforce_powercap'].index[1]-data[cluster][my_trace]['first_sensor_point'])
+    y0 = np.mean(data[cluster][my_trace]['aggregated_values']['progress_frequency_sliding_window'].loc[step_time-10:step_time])
+    yinf = np.mean(data[cluster][my_trace]['aggregated_values']['progress_frequency_sliding_window'].loc[step_time+2:step_time+12])
+    y63 = y0 + 0.63*(yinf-y0)
+    t63 = 30.9 # gros, step 70-90W. Retreived manually. SC: to compute autoatically 
+    tau = t63 - step_time #  = 0.49960794448852397 # gros, step 70-90W.# cluster dependent
+
+for cluster in clusters:
+    a = 0.89 # dahu 0.93 - yeti 0.89 - gros 0.94
+    b = 2.49 # dahu 0.68 - yeti 2.49 - gros 0.03
+    alpha = 0.04
+    beta = 36 # dahu 30 - yeti 36 - gros 
+    K_L =  71.5 # dahu 38.7 - yeti 71.5 - gros 25
+    tau = 0.5 # ???
+    data[cluster][my_trace]['aggregated_values']['progress_model'] = pd.DataFrame({'progress_model':K_L*(1 + -np.exp( -alpha*( a*data[cluster][my_trace]['aggregated_values']['pcap'].iloc[0] + b - beta ) )),'timestamp':data[cluster][my_trace]['aggregated_values']['upsampled_timestamps'].index[0]}, index=[0])
+    data[cluster][my_trace]['aggregated_values']['progress_model'] = data[cluster][my_trace]['aggregated_values']['progress_model'].append({'progress_model':K_L*(1 + -np.exp( -alpha*( a*data[cluster][my_trace]['aggregated_values']['pcap'].iloc[1][0] + b - beta ) )),'timestamp':data[cluster][my_trace]['aggregated_values']['upsampled_timestamps'].index[1]}, ignore_index=True)
+    for t in range(2,len(data[cluster][my_trace]['aggregated_values']['upsampled_timestamps'].index)):
+        pcap_old_L = -np.exp( -alpha*( a*data[cluster][my_trace]['aggregated_values']['pcap'].iloc[t-1] + b - beta ) )
+        T_S= data[cluster][my_trace]['aggregated_values']['upsampled_timestamps'].index[t] - data[cluster][my_trace]['aggregated_values']['upsampled_timestamps'].index[t-1]
+        data[cluster][my_trace]['aggregated_values']['progress_model'] = data[cluster][my_trace]['aggregated_values']['progress_model'].append({'progress_model':K_L*T_S/(T_S+tau)*pcap_old_L[0] + tau/(T_S+tau)*(data[cluster][my_trace]['aggregated_values']['progress_model']['progress_model'].iloc[-1] - K_L) + K_L,'timestamp':data[cluster][my_trace]['aggregated_values']['upsampled_timestamps'].index[t]}, ignore_index=True)
+    data[cluster][my_trace]['aggregated_values']['progress_model'] = data[cluster][my_trace]['aggregated_values']['progress_model'].set_index('timestamp')
+
+# Choose a cluster and a trace
+#my_trace = 
+            
+#my_traces = [traces[cluster][3], traces[cluster][7], traces[cluster][8]]
+
+    # PLOT
+cluster = 'yeti'
+x_zoom = [0,100]
+fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(5.7,6.6))
+#fig.suptitle(data[cluster][my_trace]['parameters']['benchmark']+', Pcap='+str(data[cluster][my_trace]['parameters']['powercap'])+'W')
+#for my_trace in my_traces:
+#data[cluster][my_trace]['nrm_downstream_sensors']['downstream'].plot(color='peru',ax=axes[0], style=".", markersize=2)
+#data[cluster][my_trace]['aggregated_values']['performance_frequency'].plot(color='darkblue',ax=axes[0], style=".", markersize=2)
+#data[cluster][my_trace]['aggregated_values']['progress_frequency_sliding_window'].plot(color='b',ax=axes[0], style=".-", markersize=2)
+data[cluster][my_trace]['aggregated_values']['progress_frequency_median']['median'].plot(color=clusters_styles[cluster],ax=axes[0], marker=clusters_markers[cluster], markersize=5)
+data[cluster][my_trace]['aggregated_values']['progress_model'].plot(color='b',ax=axes[0], marker="d", markersize=3)
+axes[0].set_ylabel('Progress (in Hz)')
+axes[0].set_xlabel('')
+axes[0].legend(['cluster: '+cluster])
+axes[0].legend(['Measure','Model'],fontsize='small')
+#axes[0].legend([])
+#axes[0].legend(['Heartrate','Averaged Heartrate ('+str(my_trace)+')'],fontsize='small',ncol=1)#
+axes[0].set_ylim([0,75])
+axes[0].set_xlim(x_zoom)
+axes[0].grid(True)
+#for my_trace in my_traces:
+if experiment_type == 'preliminaries':
+    axes[1].axhline(y=data[cluster][my_trace]['parameters']['powercap'], color='lightcoral', linestyle='-')
+else:
+    data[cluster][my_trace]['aggregated_values']['pcap'].plot(color='k',ax=axes[1], style=".")#, style="+",  markersize=4)
+data[cluster][my_trace]['rapl_sensors']['value0'].plot(color='palevioletred',ax=axes[1], style="+")#, style="+",  markersize=4)
+data[cluster][my_trace]['rapl_sensors']['value1'].plot(color='palevioletred',ax=axes[1], style="+",  markersize=2)
+data[cluster][my_trace]['rapl_sensors']['value2'].plot(color='palevioletred',ax=axes[1], style="-")#, style="+",  markersize=4)
+data[cluster][my_trace]['rapl_sensors']['value3'].plot(color='palevioletred',ax=axes[1], style="-")#, style="+",  markersize=4)
+#axes[1].axhline(y=TDP[cluster], color='black', linestyle=':')
+axes[1].set_ylabel('Power (in W)')
+axes[1].set_xlabel('Time (in s)')
+axes[1].set_ylim([30,130])
+axes[1].legend(['Powercap','Measure'],fontsize='small',ncol=1) # ,'Measure - package1'
+axes[1].grid(True)
+axes[1].set_xlim(x_zoom)
+
+    # Save
+#plt.savefig(os.getcwd()+'/Documents/ctrl-rapl/working-documents/figures/'+experiment_date+'/progress_model_power_pcap_vs_time_'+cluster+'-identification-'+trace+'_variablep0.pdf')
+
+    
+# =============================================================================
+#                               Controller
+# =============================================================================
+
+## GROS ##
+
+# init
+T_S = 1 # rapl period
+K_L = 25 # cluster dependent
+tau = 0.49960794448852397 # cluster dependent, gros value
+tau_obj = 10 # controller parameter
+K_I = tau / (K_L*tau_obj)
+K_P = 1 / (K_L*tau_obj)
+progress_objective = K_L/2
+a = 0.94 # cluster dependent
+b = 0.03 # cluster dependent
+alpha = 0.04 # cluster dependent
+beta = 30 # cluster dependent
+error_old = 0 # init
+pcap_max = 120
+pcap_min = 40
+pcap = pcap_max # in W (max)
+pcap_old_L = -np.exp( -alpha*( a*pcap + b - beta ) )
+progress_old_model = K_L*(1 + pcap_old_L)
+progress_old_model_L = progress_old_model - K_L
+k = 0
+
+duration = 50
+prog = np.zeros(duration)
+pcp = np.zeros(duration)
+pcpL = np.zeros(duration)
+
+while k<(duration-1):
+    # in the execution loop
+    progress_current_model_L = K_L*T_S/(T_S+tau)*pcap_old_L + tau/(T_S+tau)*progress_old_model_L
+    progress_current_model = progress_current_model_L + K_L
+    # progress_current <-- median of frequencies of heartbeats received in the last T_S seconds (heartrate median over the last T_S seconds)
+    error_current = progress_objective - progress_current_model
+    pcap_next_L = (T_S*K_I +K_P)*error_current - K_P*error_old + pcap_old_L
+    pcap_next = (-(np.log(-pcap_next_L)) / alpha + beta - b) / a
+    pcap_next = max(min(pcap_next,pcap_max),pcap_min)
+    
+    error_old = error_current
+    pcap_old_L = -np.exp( -alpha*( a*pcap_next + b - beta ) )
+    progress_old_model = progress_current_model
+    progress_old_model_L = progress_old_model - K_L
+    prog[k]=progress_current_model
+    pcp[k]=pcap_next
+    pcpL[k] = pcap_next_L
+    k = k+1
+
