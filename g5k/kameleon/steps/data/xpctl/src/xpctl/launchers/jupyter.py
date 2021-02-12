@@ -22,7 +22,7 @@ START_CMD = command.Command('jupyter-notebook') \
                 .arg('--NotebookApp.default_url=/tree/notebooks')
 
 STOP_CMD = command.Command('jupyter-notebook') \
-                .arg('stop')
+               .arg('stop')
 
 
 # ==========  helpers  ==========
@@ -30,15 +30,15 @@ STOP_CMD = command.Command('jupyter-notebook') \
 def forge_run_cmd(*, cmd, user):
     """Forge a command description for `subprocess.run`."""
     nix_cmd = command.NixShellCommand() \
-                         .pure() \
-                         .arg('jupyter', 'true') \
-                         .arg('experiment', 'true') \
-                         .path('<hnrm/shell.nix>') \
-                         .command(cmd, interactive=False)
+                  .pure() \
+                  .arg('jupyter', 'true') \
+                  .arg('experiment', 'true') \
+                  .path('<hnrm/shell.nix>') \
+                  .command(cmd, interactive=False)
 
     runas_cmd = command.ProxyCommand('runuser') \
-                         .args('-u', user) \
-                         .command(nix_cmd)
+                    .args('-u', user) \
+                    .command(nix_cmd)
 
     return runas_cmd
 
