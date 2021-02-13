@@ -13,5 +13,6 @@ in drv.overrideAttrs (o: {
   buildInputs =
     o.buildInputs
     ++ [ pkgs.nas ]
-    ++ xpctl pkgs;
+    ++ xpctl pkgs
+  ;
 })

@@ -20,5 +20,6 @@ in drv.overrideAttrs (o: {
       problemSize = problemSize;
       nrmSupport = nrmSupport;
     })]
-    ++ xpctl pkgs;
+    ++ xpctl pkgs
+  ;
 })

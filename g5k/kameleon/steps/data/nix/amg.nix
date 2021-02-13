@@ -14,5 +14,6 @@ in drv.overrideAttrs (o: {
   buildInputs =
     o.buildInputs
     ++ [ (pkgs.amg.override { nrmSupport = nrmSupport; }) ]
-    ++ xpctl pkgs;
+    ++ xpctl pkgs
+  ;
 })
