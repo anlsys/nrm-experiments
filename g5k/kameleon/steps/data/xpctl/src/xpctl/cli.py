@@ -108,6 +108,13 @@ def identification(ctx, plan, cmd):
 # -----  controller experiment sub-command  -----
 
 @cli.command()
+@click.option(
+    '-c', '--controller-configuration', 'ctrl_config',
+    type=click.Path(exists=True, readable=True),
+    required=True,
+    help='Controller configuration.',
+    metavar='PATH',
+)
 @click.argument(
     'cmd',
     nargs=-1,
@@ -115,7 +122,7 @@ def identification(ctx, plan, cmd):
     required=True,
 )
 @click.pass_context  # let sub-command access its parent's params
-def controller(ctx, cmd):
+def controller(ctx, ctrl_config, cmd):
     """Launch controller experiment."""
 
     click.echo('controller sub-cmd')

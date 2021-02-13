@@ -44,7 +44,7 @@ GNU_TIME_FORMAT = (
 )
 
 
-def forge_run_cmd(*, cmd, runner, user):
+def forge_run_cmd(*, cmd, runner, user, ctrl_config):
     """Forge a command description for `subprocess.run`."""
 
     # assign arguments to relevant commands
@@ -53,6 +53,7 @@ def forge_run_cmd(*, cmd, runner, user):
 
     # wrap bench_cmd with experiment runner command
     runner_cmd = command.ProxyCommand(runner) \
+                     .arg(ctrl_config) \
                      .command(bench_cmd)
 
     # collect metrics with GNU time
@@ -83,6 +84,7 @@ def launch(params):  # pylint: disable=missing-function-docstring
         cmd=params['cmd'],
         runner=params['config']['runners']['controller'],
         user=params['config']['xpctl']['user'],
+        ctrl_config=params['ctrl_config']
     )
     print(start_cmd.build(), file=sys.stderr)  # XXX: logs
     subprocess.run(

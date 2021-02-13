@@ -7,9 +7,13 @@ import csv
 import logging
 import logging.config
 import math
+import pathlib
 import statistics
 import time
 import uuid
+
+import cerberus
+import ruamel.yaml
 
 import nrm.tooling as nrm
 
@@ -66,6 +70,110 @@ LOGS_CONF = {
 logging.config.dictConfig(LOGS_CONF)
 
 logger = logging.getLogger(LOGGER_NAME)
+
+
+# controller configuration validation/load  ###################################
+
+CTRL_CONFIG_VERSION = 1  # current version of controller configuration format
+
+CTRL_CONFIG_SCHEMA = {
+    'version': {
+        'type': 'integer',
+        'min': 1,
+        'required': True,
+    },
+    'rapl': {
+        'type': 'dict',
+        'required': True,
+        'schema': {
+            'slope': {
+                'type': 'float',
+                'required': True,
+            },
+            'offset': {
+                'type': 'float',
+                'required': True,
+            },
+        },
+    },
+    'model': {
+        'type': 'dict',
+        'required': True,
+        'schema': {
+            'alpha': {
+                'type': 'float',
+                'min': 0,  # thresholding in linear space requires alpha > 0
+                'required': True,
+            },
+            'beta': {
+                'type': 'float',
+                'required': True,
+            },
+            'gain': {
+                'type': 'float',
+                'required': True,
+            },
+            'time-constant': {
+                'type': 'float',
+                'min': 0,
+                'required': True,
+            },
+        },
+    },
+    'controller': {
+        'type': 'dict',
+        'required': True,
+        'schema': {
+            'response-time': {
+                'type': 'float',
+                'min': 0,
+                'required': True,
+            },
+            'setpoint': {
+                'type': 'float',
+                'min': 0,
+                'max': 1,
+                'required': True,
+            },
+            'power-range': {
+                'type': 'list',
+                'items': [
+                    {  # minimum powercap
+                        'type': 'float',
+                        'min': 0,
+                    },
+                    {  # maximum powercap
+                        'type': 'float',
+                        'min': 0,
+                    },
+                ],
+                'required': True,
+            },
+        },
+    },
+}
+
+
+def read_controller_configuration(filepath):
+    yaml_parser = ruamel.yaml.YAML(typ='safe', pure=True)
+    raw_config = yaml_parser.load(pathlib.Path(filepath))
+
+    # check controller configuration follows the defined schema
+    validator = cerberus.Validator(schema=CTRL_CONFIG_SCHEMA)
+    config = validator.validated(raw_config)
+
+    if config is None:
+        raise argparse.ArgumentTypeError('bogus controller configuration')
+
+    if config['version'] != CTRL_CONFIG_VERSION:
+        raise argparse.ArgumentTypeError(
+            f'invalid version of controller configuration format, expected version {CTRL_CONFIG_VERSION}'
+        )
+
+    if config['controller']['power-range'][0] >= config['controller']['power-range'][1]:
+        raise argparse.ArgumentTypeError('invalid power range')
+
+    return dict(config)
 
 
 # CSV export  #################################################################
@@ -168,68 +276,100 @@ def dump_upstream_msg(csvwriters, msg):
 
 # The system is approximated as a first order linear system.
 # The controller is implemented as a Proportional-Integral (PI) controller.
-
-
-# -----  RAPL characterization  -----
-
-# The effective power consumption does not exactly match the powercap command.
-# The deviation is modeled as an affine relation:
-#     power consumption = f(powercap)
-#                       = RAPL_SLOPE * powercap + RAPL_OFFSET
-
-RAPL_SLOPE = 0.94  # (unitless)
-RAPL_OFFSET = 0.03  # (in watt)
-
-
-# -----  model parameters  -----
-
-# The system is modeled with the following equation:
-#     progress = f(powercap)
-#              = GAIN_LINEAR * (1 - exp(-ALPHA * (powercap - BETA)))
-
-# benchmark/cluster dependent parameters
-ALPHA = 0.04  # (in 1/watt)
-BETA = 30  # (in watt)
-
-# powercap → progress parameters (first-order linear approximation)
-GAIN_LINEAR = 25  # (in hertz)
-TIME_CONSTANT = 0.5  # (in second)
-
-# linearization/delinearization (with respect to the model equation)
-def _linearize(value):
-    return -math.exp(-ALPHA * (RAPL_SLOPE * value + RAPL_OFFSET - BETA))
-
-def _delinearize(value):
-    return (-math.log(-value) / ALPHA + BETA - RAPL_OFFSET) / RAPL_SLOPE
-
-
-# -----  controller parameters  -----
-
-RESPONSE_TIME = 30  # 5% response time (defined as 3·τ)
-INTEGRAL_GAIN = TIME_CONSTANT / (GAIN_LINEAR * RESPONSE_TIME / 3)
-PROPORTIONAL_GAIN = 1 / (GAIN_LINEAR * RESPONSE_TIME / 3)
-
-# operating range
-POWERCAP_MIN, POWERCAP_MAX = 40, 120
-POWERCAP_LINEAR_MIN, POWERCAP_LINEAR_MAX = \
-        _linearize(POWERCAP_MIN), _linearize(POWERCAP_MAX)
+#
+# The configuration of the controller is divided in three sections:
+#
+# 1. RAPL characterization  -----
+#
+#   The effective power consumption does not exactly match the powercap
+#   command.
+#   The deviation is modeled as an affine relation:
+#       power consumption = f(powercap)
+#                         = config['rapl']['slope'] * powercap + config['rapl']['offset']
+#
+#   where:
+#     - config['rapl']['slope'] is unitless
+#     - config['rapl']['offset'] is in Watt
+#
+#
+# 2. model parameters  -----
+#
+#   The system is modeled with the following equation:
+#       progress = f(powercap)
+#                = config['model']['gain'] * (1 - exp(-config['model']['alpha'] * (powercap - config['model']['beta'])))
+#
+#   where:
+#     - config['model']['alpha'] is in 1/Watt
+#     - config['model']['beta'] is in Watt
+#     - config['model']['gain'] is in Hertz
+#
+#   The benchmark/cluster modelization impacts config['model']['alpha'] and
+#   config['model']['beta'] parameters.
+#
+#   The relationship between the powercap and the progress (i.e., progress as a
+#   function of powercap) is modeled with a first-order linear approximation.
+#   It is configured by the config['model']['gain'] and
+#   config['model']['time-constant'] parameters.
+#
+#
+# 3. controller parameters  -----
+#
+#   The controller is configured with the following parameters:
+#    - config['controller']['setpoint'] (unitless):
+#        A value in the continuous interval [0, 1] representing the level of
+#        performance to achieve (as a proportion of the maximum performance).
+#    - config['controller']['response-time'] (in second):
+#        5% response time (defined as 3·τ)
+#    - config['controller']['power-range'] (in Watt):
+#        A pair (low, high) — where low < high — of value representing the
+#        range of powercap values the controller is allowed to use.
 
 
 class PIController:
-    def __init__(self, daemon, rapl_actuators):
+    def __init__(self, config, daemon, rapl_actuators):
         self.daemon = daemon
         self.rapl_actuators = rapl_actuators
 
+        # rapl characterization
+        self._rapl_slope = config['rapl']['slope']
+        self._rapl_offset = config['rapl']['offset']
+
+        # model parameters
+        self._model_alpha = config['model']['alpha']
+        self._model_beta = config['model']['beta']
+        self._model_gain_linear = config['model']['gain']
+        self._model_time_constant = config['model']['time-constant']
+
+        # controller parameters
+        self._setpoint = config['controller']['setpoint']
+        self._response_time = config['controller']['response-time']
+        self._proportional_gain = \
+                1 / (self._model_gain_linear * self._response_time / 3)
+        self._integral_gain = \
+                self._model_time_constant * self._proportional_gain
+        self._powercap_linear_min = \
+                self._linearize(config['controller']['power-range'][0])
+        self._powercap_linear_max = \
+                self._linearize(config['controller']['power-range'][1])
+
         # objective configuration (requested system behavior)
-        self.progress_setpoint = GAIN_LINEAR / 2
+        self.progress_setpoint = self._setpoint * self._model_gain_linear
 
         # controller initial state
-        self.powercap_linear = POWERCAP_LINEAR_MAX
+        self.powercap_linear = self._powercap_linear_max
         self.prev_error = 0
 
         # RAPL window monitoring
         self.rapl_window_timestamp = time.time()  # start of current RAPL window
         self.heartbeat_timestamps = []
+
+    def _linearize(self, value):
+        # see model equation
+        return -math.exp(-self._model_alpha * (self._rapl_slope * value + self._rapl_offset - self._model_beta))
+
+    def _delinearize(self, value):
+        # see model equation
+        return (-math.log(-value) / self._model_alpha + self._model_beta - self._rapl_offset) / self._rapl_slope
 
     def control(self, csvwriters):
         while not self.daemon.all_finished():
@@ -269,24 +409,23 @@ class PIController:
 
                 # compute command with linear equation
                 self.powercap_linear = \
-                        window_duration * INTEGRAL_GAIN * error + \
-                        PROPORTIONAL_GAIN * (error - self.prev_error) + \
+                        window_duration * self._integral_gain * error + \
+                        self._proportional_gain * (error - self.prev_error) + \
                         self.powercap_linear
 
-                # thresholding (ensure POWERCAP_MIN ≤ powercap ≤ POWERCAP_MAX)
+                # thresholding (ensure powercap remains in controller power range)
                 #   this can be done in the linear space as the variable change
-                #   is monotic (increasing if ALPHA > 0)
-                assert ALPHA > 0
+                #   is monotic (increasing as self._model_alpha > 0)
                 self.powercap_linear = max(
                     min(
                         self.powercap_linear,
-                        POWERCAP_LINEAR_MAX
+                        self._powercap_linear_max
                     ),
-                    POWERCAP_LINEAR_MIN
+                    self._powercap_linear_min
                 )
 
                 # delinearize to get actual actuator value
-                powercap = _delinearize(self.powercap_linear)
+                powercap = self._delinearize(self.powercap_linear)
 
                 # propagate state
                 self.prev_error = error
@@ -351,7 +490,7 @@ def collect_rapl_actuators(daemon):
     return rapl_actuators
 
 
-def launch_application(daemon_cfg, workload_cfg, *, sleep_duration=0.5):
+def launch_application(config, daemon_cfg, workload_cfg, *, sleep_duration=0.5):
     with nrm.nrmd(daemon_cfg) as daemon:
         # collect RAPL actuators
         rapl_actuators = collect_rapl_actuators(daemon)
@@ -379,7 +518,7 @@ def launch_application(daemon_cfg, workload_cfg, *, sleep_duration=0.5):
             # we combine all open context managers thanks to an ExitStack
             csvwriters = initialize_csvwriters(stack)
 
-            controller = PIController(daemon, rapl_actuators)
+            controller = PIController(config, daemon, rapl_actuators)
             controller.control(csvwriters)
 
 
@@ -388,10 +527,14 @@ def launch_application(daemon_cfg, workload_cfg, *, sleep_duration=0.5):
 def cli(args=None):
 
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        'config',
+        type=read_controller_configuration,
+        metavar='configuration-filepath',
+        help='Path of controller configuration.',
+    )
 
     options, cmd = parser.parse_known_args(args)
-    if cmd[0] == '--':
-        cmd = cmd[1:]
 
     return options, cmd
 
@@ -402,7 +545,10 @@ def run(options, cmd):
         'raplCfg': {
             'raplActions': [  # XXX: check with Valentin for continuous range
                 {'microwatts': 1_000_000 * powercap}
-                for powercap in range(POWERCAP_MIN, POWERCAP_MAX + 1)
+                for powercap in range(
+                    round(options.config['controller']['power-range'][0]),
+                    round(options.config['controller']['power-range'][1]) + 1
+                )
             ],
         },
         'passiveSensorFrequency': {
@@ -446,7 +592,7 @@ def run(options, cmd):
 
     logger.info(f'daemon_cfg={daemon_cfg}')
     logger.info(f'workload_cfg={workload_cfg}')
-    launch_application(daemon_cfg, workload_cfg)
+    launch_application(options.config, daemon_cfg, workload_cfg)
 
 
 if __name__ == '__main__':
