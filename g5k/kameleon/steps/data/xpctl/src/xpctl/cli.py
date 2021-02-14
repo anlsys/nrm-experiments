@@ -103,3 +103,30 @@ def identification(ctx, plan, cmd):
 
     from .launchers.identification import launch  # pylint: disable=import-outside-toplevel
     launch(params)
+
+
+# -----  controller experiment sub-command  -----
+
+@cli.command()
+@click.option(
+    '-c', '--controller-configuration', 'ctrl_config',
+    type=click.Path(exists=True, readable=True),
+    required=True,
+    help='Controller configuration.',
+    metavar='PATH',
+)
+@click.argument(
+    'cmd',
+    nargs=-1,
+    type=click.UNPROCESSED,
+    required=True,
+)
+@click.pass_context  # let sub-command access its parent's params
+def controller(ctx, ctrl_config, cmd):
+    """Launch controller experiment."""
+
+    click.echo('controller sub-cmd')
+    params = collections.ChainMap(ctx.params, ctx.parent.params)
+
+    from .launchers.controller import launch  # pylint: disable=import-outside-toplevel
+    launch(params)
