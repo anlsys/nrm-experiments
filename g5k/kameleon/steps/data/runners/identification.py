@@ -515,6 +515,7 @@ def run(options, cmd):
             libnrm=options.libnrm,
         )
     )
+    logger.info('successful execution')
 
 
 if __name__ == '__main__':

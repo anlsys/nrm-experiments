@@ -583,6 +583,7 @@ def run(options, cmd):
     logger.info(f'daemon_cfg={daemon_cfg}')
     logger.info(f'workload_cfg={workload_cfg}')
     launch_application(options.config, daemon_cfg, workload_cfg)
+    logger.info('successful execution')
 
 
 if __name__ == '__main__':
