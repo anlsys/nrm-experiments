@@ -56,6 +56,11 @@ def forge_run_cmd(*, cmd, runner, user, ctrl_config):
                      .arg(ctrl_config) \
                      .command(bench_cmd)
 
+    # enable libnrm
+    if not cmd_builder.supports_libnrm:
+        raise RuntimeError(f'"{cmd[0]}" does not support required libnrm instrumentation')
+    nix_cmd.arg('nrmSupport', 'true')
+
     # collect metrics with GNU time
     with open(GNU_TIME_LOG_PATH, 'w') as gnu_time_log:
         print(','.join(t[0] for t in GNU_TIME_FORMAT), file=gnu_time_log, flush=True)

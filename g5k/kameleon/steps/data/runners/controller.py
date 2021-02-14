@@ -25,13 +25,6 @@ RAPL_SENSOR_FREQ = 1
 CPD_SENSORS_MAXTRY = 5
 
 
-# XXX: modularize by reading the xpctl_conf file
-LIBNRM_INSTRUMENTED_BENCHMARKS = {  # benchmark requiring libnrm instrumentation
-    'stream_c',
-    'amg'
-}
-
-
 # logging configuration  ######################################################
 
 LOGGER_NAME = 'controller-runner'
@@ -503,14 +496,12 @@ def launch_application(config, daemon_cfg, workload_cfg, *, sleep_duration=0.5):
         logger.info('launch workload')
         daemon.run(**workload_cfg)
 
-        # retrieve definition of extra sensors if required
-        if workload_cfg['cmd'] in LIBNRM_INSTRUMENTED_BENCHMARKS:
-            app_sensors = update_sensors_list(daemon, sensors, sleep_duration=sleep_duration)
-            if not app_sensors:
-                logger.critical('failed to get application-specific sensors')
-                raise RuntimeError('Unable to get application-specific sensors')
-            logger.info(f'app_sensors={app_sensors}')
-
+        # retrieve definition of extra sensors (libnrm progress, …)
+        app_sensors = update_sensors_list(daemon, sensors, sleep_duration=sleep_duration)
+        if not app_sensors:
+            logger.critical('failed to get application-specific sensors')
+            raise RuntimeError('Unable to get application-specific sensors')
+        logger.info(f'app_sensors={app_sensors}')
 
         with contextlib.ExitStack() as stack:
             # each message type is dumped into its own csv file
@@ -567,7 +558,12 @@ def run(options, cmd):
         'args': cmd[1:],
         'sliceID': 'sliceID',  # XXX: bug in pynrm/hnrm if missing or None (should be generated?)
         'manifest': {
-            'app': {},
+            'app': {
+                # configure libnrm instrumentation
+                'instrumentation': {
+                    'ratelimit': {'hertz': 1_000_000},
+                },
+            },
         },
     }
     # NB: if we want to keep the output of the launched command when run in
@@ -583,12 +579,6 @@ def run(options, cmd):
     #     cmd='sh',
     #     args=['-c', ' '.join(cmd), '>/tmp/stdout', '2>/tmp/stderr'],
     # )
-
-    # configure libnrm instrumentation if required
-    if workload_cfg['cmd'] in LIBNRM_INSTRUMENTED_BENCHMARKS:
-        workload_cfg['manifest']['app']['instrumentation'] = {
-            'ratelimit': {'hertz': 1_000_000},
-        }
 
     logger.info(f'daemon_cfg={daemon_cfg}')
     logger.info(f'workload_cfg={workload_cfg}')

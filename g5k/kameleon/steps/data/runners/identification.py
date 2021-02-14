@@ -30,13 +30,6 @@ CPD_SENSORS_MAXTRY = 5
 METRIC_COLLECTION_TIMEOUT = 0.1
 
 
-# XXX: modularize by reading the xpctl_conf file
-LIBNRM_INSTRUMENTED_BENCHMARKS = {  # benchmark requiring libnrm instrumentation
-    'stream_c',
-    'amg'
-}
-
-
 # logging configuration  ######################################################
 
 LOGGER_NAME = 'identification-runner'
@@ -406,7 +399,7 @@ async def do_daemon_ios(plan, daemon, rapl_actuators, csvwriters):
         logger.warning('experiment plan partially executed')
 
 
-async def launch_application(plan, daemon_cfg, workload_cfg, *, sleep_duration=0.5):
+async def launch_application(plan, daemon_cfg, workload_cfg, *, libnrm, sleep_duration=0.5):
     with nrm.nrmd(daemon_cfg) as daemon:
         # collect RAPL actuators
         rapl_actuators = collect_rapl_actuators(daemon)
@@ -422,7 +415,7 @@ async def launch_application(plan, daemon_cfg, workload_cfg, *, sleep_duration=0
         daemon.run(**workload_cfg)
 
         # retrieve definition of extra sensors if required
-        if workload_cfg['cmd'] in LIBNRM_INSTRUMENTED_BENCHMARKS:
+        if libnrm:
             app_sensors = update_sensors_list(daemon, sensors, sleep_duration=sleep_duration)
             if not app_sensors:
                 logger.critical('failed to get application-specific sensors')
@@ -444,6 +437,12 @@ async def launch_application(plan, daemon_cfg, workload_cfg, *, sleep_duration=0
 def cli(args=None):
 
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--enable-libnrm',
+        action='store_true',
+        dest='libnrm',
+        help='Enable libnrm instrumentation.',
+    )
     parser.add_argument(
         'plan',
         type=read_experiment_plan,
@@ -501,7 +500,7 @@ def run(options, cmd):
     # )
 
     # configure libnrm instrumentation if required
-    if workload_cfg['cmd'] in LIBNRM_INSTRUMENTED_BENCHMARKS:
+    if options.libnrm:
         workload_cfg['manifest']['app']['instrumentation'] = {
             'ratelimit': {'hertz': 1_000_000},
         }
@@ -513,6 +512,7 @@ def run(options, cmd):
             options.plan,
             daemon_cfg,
             workload_cfg,
+            libnrm=options.libnrm,
         )
     )
 

@@ -54,8 +54,15 @@ def forge_run_cmd(*, cmd, runner, user, plan):
 
     # wrap bench_cmd with experiment runner command
     runner_cmd = command.ProxyCommand(runner) \
-                     .arg(plan) \
                      .command(bench_cmd)
+
+    # enable libnrm if the benchmark supports it
+    if cmd_builder.supports_libnrm:
+        nix_cmd.arg('nrmSupport', 'true')
+        runner_cmd.arg('--enable-libnrm')
+
+    # the experiment plan must be set after optional arguments (e.g., --enable-libnrm)
+    runner_cmd.arg(plan)
 
     # collect metrics with GNU time
     with open(GNU_TIME_LOG_PATH, 'w') as gnu_time_log:

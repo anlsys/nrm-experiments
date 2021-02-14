@@ -141,6 +141,7 @@ class BenchmarkCommandBuilder:
 
     _available_dispatchers = {}
     nix_path = None
+    supports_libnrm = False
 
     @classmethod
     def __init_subclass__(cls, *, benchmarks=(), **kwargs):
@@ -190,6 +191,7 @@ class _STREAM(BenchmarkCommandBuilder, benchmarks=('stream_c', )):
     """
 
     nix_path = '<xpctl/stream.nix>'
+    supports_libnrm = True
 
     @classmethod
     def prepare_commands(cls, cmd):
@@ -236,6 +238,7 @@ class _AMG(BenchmarkCommandBuilder, benchmarks=('amg', )):
     """
 
     nix_path = '<xpctl/amg.nix>'
+    supports_libnrm = True
 
     @classmethod
     def prepare_commands(cls, cmd):
