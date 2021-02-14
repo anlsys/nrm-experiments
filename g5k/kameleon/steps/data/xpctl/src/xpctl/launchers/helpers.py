@@ -13,6 +13,8 @@ import signal
 import subprocess
 import sys
 
+from . import command
+
 
 def manage_remaining_processes(func=None, *, forceclean=False):
     """
@@ -66,3 +68,53 @@ def signal_handler(signalnum, handler):
         yield
     finally:
         signal.signal(signalnum, orig_handler)
+
+
+#------------------------------------------------------------------------------
+
+GNU_TIME_FORMAT = (
+    # ('csv.header', '%time-format')
+    ('cmd', r'\"%C\"'),
+    ('retcode', '%x'),
+    ('elapsed.time', '%e'),
+    ('system.time', '%S'),
+    ('user.time', '%U'),
+    ('cpu.share', '%P'),
+    ('avg.mem', '%K'),
+    ('avg.rss', '%t'),
+    ('max.rss', '%M'),
+    ('avg.data', '%D'),
+    ('avg.text', '%X'),
+    ('avg.stack', '%p'),
+    ('page.size', '%Z'),
+    ('major.page.faults', '%F'),
+    ('minor.page.faults', '%R'),
+    ('swaps', '%W'),
+    ('fs.inputs', '%I'),
+    ('fs.outputs', '%O'),
+    ('sock.rcvd', '%r'),
+    ('sock.sent', '%s'),
+    ('signals', '%k'),
+    ('time.ctx.switch', '%c'),
+    ('io.ctx.switch', '%w'),
+)
+
+
+def time_command(cmd, *, output):
+    """
+    Wrap a command to collect execution metrics with GNU time in output.
+    """
+
+    # create a new file with CSV header
+    with open(output, 'w') as gnu_time_log:
+        print(','.join(t[0] for t in GNU_TIME_FORMAT), file=gnu_time_log, flush=True)
+
+    # /!\ we avoid bash builtin with the `command` builtin /!\
+    timed_cmd = command.ProxyCommand('command time') \
+                    .arg('--append') \
+                    .arg(f'--output={output}') \
+                    .arg('--format=' + ','.join(t[1] for t in GNU_TIME_FORMAT)) \
+                    .arg('--quiet') \
+                    .command(cmd)
+
+    return timed_cmd

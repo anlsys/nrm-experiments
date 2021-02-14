@@ -15,35 +15,6 @@ from . import command
 from . import helpers
 
 
-GNU_TIME_LOG_PATH = pathlib.Path('/tmp/time-metrics.csv')
-GNU_TIME_FORMAT = (
-    # ('csv.header', '%time-format')
-    ('cmd', r'\"%C\"'),
-    ('retcode', '%x'),
-    ('elapsed.time', '%e'),
-    ('system.time', '%S'),
-    ('user.time', '%U'),
-    ('cpu.share', '%P'),
-    ('avg.mem', '%K'),
-    ('avg.rss', '%t'),
-    ('max.rss', '%M'),
-    ('avg.data', '%D'),
-    ('avg.text', '%X'),
-    ('avg.stack', '%p'),
-    ('page.size', '%Z'),
-    ('major.page.faults', '%F'),
-    ('minor.page.faults', '%R'),
-    ('swaps', '%W'),
-    ('fs.inputs', '%I'),
-    ('fs.outputs', '%O'),
-    ('sock.rcvd', '%r'),
-    ('sock.sent', '%s'),
-    ('signals', '%k'),
-    ('time.ctx.switch', '%c'),
-    ('io.ctx.switch', '%w'),
-)
-
-
 def forge_run_cmd(*, cmd, runner, user, ctrl_config):
     """Forge a command description for `subprocess.run`."""
 
@@ -62,16 +33,9 @@ def forge_run_cmd(*, cmd, runner, user, ctrl_config):
     nix_cmd.arg('nrmSupport', 'true')
 
     # collect metrics with GNU time
-    with open(GNU_TIME_LOG_PATH, 'w') as gnu_time_log:
-        print(','.join(t[0] for t in GNU_TIME_FORMAT), file=gnu_time_log, flush=True)
-    shutil.chown(GNU_TIME_LOG_PATH, user=user)
-
-    # /!\ we avoid bash builtin with the `command` builtin /!\
-    timed_cmd = command.ProxyCommand('command time') \
-                    .arg('--append') \
-                    .arg(f'--output={GNU_TIME_LOG_PATH}') \
-                    .arg('--format=' + ','.join(t[1] for t in GNU_TIME_FORMAT)) \
-                    .command(runner_cmd)
+    time_metrics_path = pathlib.Path('/tmp/time-metrics.csv')
+    timed_cmd = helpers.time_command(runner_cmd, output=time_metrics_path)
+    shutil.chown(time_metrics_path, user=user)  # ensure user has read/write access
 
     # build final nix_cmd by injecting runner_cmd
     nix_cmd.command(timed_cmd, interactive=False)
