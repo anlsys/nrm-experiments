@@ -1,2 +1,0 @@
-cmd,retcode,elapsed.time,system.time,user.time,cpu.share,avg.mem,avg.rss,max.rss,avg.data,avg.text,avg.stack,page.size,major.page.faults,minor.page.faults,swaps,fs.inputs,fs.outputs,sock.rcvd,sock.sent,signals,time.ctx.switch,io.ctx.switch
-"/opt/libexec/runners/identification.py /opt/static-characteristic-40-5-120/step_40.yaml -- stream_c",0,1350.65,140.38,354.49,36%,0,0,267964,0,0,0,4096,0,129555,0,0,5224,0,0,0,24265,256637

@@ -1,2 +1,0 @@
-cmd,retcode,elapsed.time,system.time,user.time,cpu.share,avg.mem,avg.rss,max.rss,avg.data,avg.text,avg.stack,page.size,major.page.faults,minor.page.faults,swaps,fs.inputs,fs.outputs,sock.rcvd,sock.sent,signals,time.ctx.switch,io.ctx.switch
-"/opt/libexec/runners/identification.py /opt/stairs-20sec.yaml -- stream_c",0,198.40,7.35,25.92,16%,0,0,259552,0,0,0,4096,0,71097,0,0,3384,0,0,0,7299,130506

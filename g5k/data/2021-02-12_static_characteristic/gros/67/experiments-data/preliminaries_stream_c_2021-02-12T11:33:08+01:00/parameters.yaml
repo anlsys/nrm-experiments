@@ -1,4 +1,0 @@
-timestamp: 2021-02-12T11:33:08+01:00
-benchmark: stream_c
-experiment-plan: step_120.yaml
-extra: --iterationCount=10_000 --problemSize=33_554_432
