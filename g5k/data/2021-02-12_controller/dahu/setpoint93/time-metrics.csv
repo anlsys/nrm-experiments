@@ -1,0 +1,2 @@
+cmd,retcode,elapsed.time,system.time,user.time,cpu.share,avg.mem,avg.rss,max.rss,avg.data,avg.text,avg.stack,page.size,major.page.faults,minor.page.faults,swaps,fs.inputs,fs.outputs,sock.rcvd,sock.sent,signals,time.ctx.switch,io.ctx.switch
+"/opt/libexec/runners/controller.py -- stream_c",0,319.85,18.40,23.21,13%,0,0,186508,0,0,0,4096,0,57118,0,0,7896,0,0,0,69669,193881

@@ -1,0 +1,2 @@
+cmd,retcode,elapsed.time,system.time,user.time,cpu.share,avg.mem,avg.rss,max.rss,avg.data,avg.text,avg.stack,page.size,major.page.faults,minor.page.faults,swaps,fs.inputs,fs.outputs,sock.rcvd,sock.sent,signals,time.ctx.switch,io.ctx.switch
+"/opt/libexec/runners/identification.py --enable-libnrm /opt/stairs-20sec.yaml -- stream_c",0,195.63,6.48,21.04,14%,0,0,261072,0,0,0,4096,0,83944,0,0,3192,0,0,0,4710,123292

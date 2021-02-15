@@ -1,0 +1,2 @@
+cmd,retcode,elapsed.time,system.time,user.time,cpu.share,avg.mem,avg.rss,max.rss,avg.data,avg.text,avg.stack,page.size,major.page.faults,minor.page.faults,swaps,fs.inputs,fs.outputs,sock.rcvd,sock.sent,signals,time.ctx.switch,io.ctx.switch
+"/opt/libexec/runners/controller.py /opt/yeti.yaml -- stream_c",0,251.93,8.33,22.37,12%,0,0,196244,0,0,0,4096,762,76075,0,266432,9544,0,0,0,146581,191427
