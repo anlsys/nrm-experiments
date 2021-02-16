@@ -12,8 +12,8 @@
 # -----------------------------------------------------------------------------
 #
 # authors: Raphaël Bleuse <raphael.bleuse@inria.fr>
-# date: 2021-01-25
-# version: 0.3
+# date: 2021-02-16
+# version: 0.4
 
 export LC_ALL=C  # ensure we are working with known locales
 set -e -u -f -o pipefail # safer shell script
@@ -22,6 +22,12 @@ declare -r PROGRAM=${0##*/}
 
 
 # parameters  -----------------------------------------------------------------
+
+# xpctl subcommand for each supported runner
+declare -rA RUNNERS=(
+	[controller]="controller --controller-configuration"
+	[identification]="identification --experiment-plan"
+)
 
 declare -r BENCHMARK='stream_c'
 declare -r ITERATION_COUNT='10_000'
@@ -58,28 +64,35 @@ declare -ra SYSTEM_STATE_SNAPSHOT_FILES=(
 	/proc/zoneinfo
 )
 
-# files to snapshot once the experiment is done
-declare -ra POSTRUN_SNAPSHOT_FILES=(
+# common (i.e., shared by runners) files to snapshot once the experiment is done
+declare -a POSTRUN_SNAPSHOT_FILES=(
 	# outputs
 	dump_pubMeasurements.csv
 	dump_pubProgress.csv
-	identification-runner.log
 	nrm.log
 	time-metrics.csv
+)
+
+# runner-specific files to snapshot once the experiment is done
+declare -rA RUNNERS_POSTRUN_SNAPSHOT_FILES=(
+	[controller]="controller-runner.log"
+	[identification]="identification-runner.log"
 )
 
 # helper functions  -----------------------------------------------------------
 
 function dump_parameters {
 	declare -r timestamp="${1}"
-	declare -r benchmark="${2}"
-	declare -r plan="${3}"
-	declare -r extra="${*:4}"
+	declare -r runner="${2}"
+	declare -r cfg="${3}"
+	declare -r benchmark="${4}"
+	declare -r extra="${*:5}"
 
 	cat <<- EOF > "${LOGDIR}/${PARAMS_FILE}"
 		timestamp: ${timestamp}
+		runner: ${runner}
+		config-file: ${cfg##*/}
 		benchmark: ${benchmark}
-		experiment-plan: ${plan##*/}
 		extra: ${extra}
 	EOF
 }
@@ -108,17 +121,25 @@ function snapshot_system_state {
 
 
 function run {
-	# canonicalize path to experiment plans
-	local input
-	input="$(readlink --canonicalize-existing "${1}")"
-	readonly input
+	declare -r runner="${1}"
+	declare -r input="${2}"
 
-	# extract experiment plans to run
-	declare -a experiment_plans
+	# extract xpctl subcommand
+	read -r -a runner_cmd <<< "${RUNNERS[${runner}]}"
+	readonly runner_cmd
+
+	# append list of runner-specific files to snapshot to POSTRUN_SNAPSHOT_FILES
+	read -r -a extra_snapshot_files <<< "${RUNNERS_POSTRUN_SNAPSHOT_FILES[${runner}]}"
+	POSTRUN_SNAPSHOT_FILES+=("${extra_snapshot_files[@]}")
+	unset -v extra_snapshot_files
+	readonly POSTRUN_SNAPSHOT_FILES
+
+	# extract list of configurations to execute
+	declare -a configs
 	if [[ -d "${input}" ]]; then
-		mapfile -t experiment_plans < <(find "${input}" -maxdepth 1 -type f | shuf)
+		mapfile -t configs < <(find "${input}" -maxdepth 1 -type f | shuf)
 	elif [[ -f "${input}" && -r "${input}" ]]; then
-		experiment_plans=("${input}")
+		configs=("${input}")
 	else
 		usage
 		>&2 cat <<-EOF
@@ -127,15 +148,15 @@ function run {
 		EOF
 		exit 64  # EX_USAGE (cf. sysexits.h)
 	fi
-	readonly experiment_plans
+	readonly configs
 
-	# run experiment plans
-	for plan in "${experiment_plans[@]}"; do
+	# run each configuration
+	for cfg in "${configs[@]}"; do
 		timestamp="$(date --iso-8601=seconds)"
 		archive="${DATADIR}/preliminaries_${BENCHMARK}_${timestamp}.tar"
 
 		# record run parameters
-		dump_parameters "${timestamp}" "${BENCHMARK}" "${plan}" "--iterationCount=${ITERATION_COUNT} --problemSize=${PROBLEM_SIZE}"
+		dump_parameters "${timestamp}" "${runner}" "${cfg}" "${BENCHMARK}" "--iterationCount=${ITERATION_COUNT} --problemSize=${PROBLEM_SIZE}"
 
 		# record machine topology
 		lstopo --output-format xml --whole-system --force "${LOGDIR}/${TOPOLOGY_FILE}"
@@ -143,15 +164,15 @@ function run {
 		# create empty archive
 		tar --create --file="${archive}" --files-from=/dev/null
 
-		# record experiment plan
-		tar --append --file="${archive}" --transform='s,^.*/,,' -- "${plan}"
+		# record configuration file
+		tar --append --file="${archive}" --transform='s,^.*/,,' -- "${cfg}"
 
 		# snapshot pre-run state
 		tar --append --file="${archive}" --directory="${LOGDIR}" -- "${PRERUN_SNAPSHOT_FILES[@]}"
 		snapshot_system_state "${archive}" 'pre'
 
 		# run benchmark
-		if xpctl identification --experiment-plan="${plan}" -- \
+		if xpctl "${runner_cmd[@]}" "${cfg}" -- \
 			"${BENCHMARK}" --iterationCount="${ITERATION_COUNT}" --problemSize="${PROBLEM_SIZE}"
 		then
 			# identify execution as successful
@@ -175,12 +196,13 @@ function run {
 
 function usage() {
 	>&2 cat <<-EOF
-	Usage: ${PROGRAM} INPUT
+	Usage: ${PROGRAM} RUNNER INPUT
 
 	Parameters:
+	  RUNNER       xpctl runner (controller, identification)
 	  INPUT        Either:
-	                 - a single experiment plan (readable file)
-	                 - directory containing multiple experiment plans
+	                 - a single configuration file (readable file)
+	                 - a directory containing multiple configuration files
 	EOF
 }
 
@@ -189,15 +211,25 @@ function usage() {
 # ensure output directory exists
 mkdir --parents "${DATADIR}"
 
-# check provided arugments
-if [[ $# -lt 1 ]]; then
+# check number of provided arguments
+if [[ $# -lt 2 ]]; then
 	usage
 	>&2 cat <<-EOF
 
-	Error: missing INPUT argument
+	Error: missing argument
+	EOF
+	exit 64  # EX_USAGE (cf. sysexits.h)
+fi
+
+# check RUNNER is supported
+if [[ ! "${RUNNERS[${1}]-}" ]]; then
+	usage
+	>&2 cat <<-EOF
+
+	Error: unknown runner "${1}"
 	EOF
 	exit 64  # EX_USAGE (cf. sysexits.h)
 fi
 
 # do the work
-run "$1"
+run "${1}" "$2"
