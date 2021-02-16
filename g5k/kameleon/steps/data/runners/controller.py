@@ -346,7 +346,7 @@ class PIController:
                 self._linearize(config['controller']['power-range'][1])
 
         # objective configuration (requested system behavior)
-        self.progress_setpoint = self._setpoint * self._model_gain_linear
+        self.progress_setpoint = self._setpoint * self._model_gain_linear * (1 + self._powercap_linear_max)
 
         # controller initial state
         self.powercap_linear = self._powercap_linear_max
