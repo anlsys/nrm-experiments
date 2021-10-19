@@ -138,7 +138,7 @@ Average power by strategy
 Package 0:
 
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap80/80"|df$name=="pcap100/100") & df$variable=="sensor-RaplKey (PackageID 0)" ) ,],
+  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap80/80"|df$name=="pcap100/100"|df$name=="pcap60/60"|df$name=="pcap90/90"|df$name=="pcap110/110"|df$name=="pcap70/70") & df$variable=="sensor-RaplKey (PackageID 0)" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
     geom_line() +
@@ -152,7 +152,7 @@ Package 0:
 Package 1:
 
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  ggplot(data=df[which((df$name=="pcap250/250" | df$name=="pcap80/80"|df$name=="pcap100/100") & df$variable=="sensor-RaplKey (PackageID 1)" ) ,],
+  ggplot(data=df[which((df$name=="pcap250/250" | df$name=="pcap80/80"|df$name=="pcap100/100"|df$name=="pcap60/60"|df$name=="pcap90/90"|df$name=="pcap110/110"|df$name=="pcap70/70") & df$variable=="sensor-RaplKey (PackageID 1)" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
     geom_line() +
@@ -165,7 +165,7 @@ Package 1:
 Downstream perf monitoring (after integrator):
 
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap80/80"|df$name=="pcap100/100") & df$variable=="sensor-sensor-Downstream" ) ,],
+  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap80/80"|df$name=="pcap100/100"|df$name=="pcap60/60"|df$name=="pcap90/90"|df$name=="pcap110/110"|df$name=="pcap70/70") & df$variable=="sensor-sensor-Downstream" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
     geom_line() +
@@ -179,7 +179,7 @@ Downstream perf monitoring (after integrator):
 Downstream perf monitoring (raw, before integrator):
 
 ```{r,  echo=FALSE, fig.cap="", dev="pdf", fig.width=11, fig.height=3}
-  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap80/80"|df$name=="pcap100/100") & df$variable=="pubPerformance" ) ,],
+  ggplot(data=df[which((df$name=="pcap250/250" |df$name=="pcap80/80"|df$name=="pcap100/100"|df$name=="pcap60/60"|df$name=="pcap90/90"|df$name=="pcap110/110"|df$name=="pcap70/70") & df$variable=="pubPerformance" ) ,],
          aes(time, as.numeric(as.character(value)),group=name,color=name) )+
     geom_point() +
     geom_line() +

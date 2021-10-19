@@ -2,7 +2,6 @@
 python3Packages.buildPythonPackage {
   src = fetchGit {
     url = "https://github.com/anlsys/nrm-python.git";
-    rev = "a9f13f8577512a70bcea7f67a2c6c7d36573d32f";
   };
   name = "nrm-python";
   buildInputs = [ nrm-core ];

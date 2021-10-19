@@ -1,8 +1,8 @@
 {
 
-pkgs ? (import ../../hnrm/default.nix { }),
+pkgs ? (import ../../hnrm.git/default.nix { }),
 
-drv ? (import ../../hnrm/shell.nix {
+drv ? (import ../../hnrm.git/shell.nix {
   inherit pkgs;
   experiment = true;
   analysis = false;
