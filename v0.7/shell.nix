@@ -7,6 +7,7 @@ mkShell {
     nrm-core
     nrm-python
     libnrm
+    nrm-extra
     hwloc
     linuxPackages.perf
   ];
