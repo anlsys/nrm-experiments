@@ -3,6 +3,7 @@ CFLAGS = -Wall
 LFLAGS = -lhwloc
 
 TARGET = topology
+OUTPUT = test.log
 
 all: $(TARGET)
 
