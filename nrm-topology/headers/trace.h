@@ -19,16 +19,22 @@
 void print_to_file(struct device** devices, int index)
 {
 	FILE *file;
-	file = fopen("./test.log", "w+");
+	file = fopen("./test.rec", "w+"); // GNU Recutils format
 	for (int i = 0; i < index; i++)
 	{
 		fprintf(file, "Type: %s\n", devices[i]->type);
 		fprintf(file, "Name: %s\n", devices[i]->name);
-		fprintf(file, "Model: %s\n", devices[i]->model);
+//		fprintf(file, "Model: %s\n", devices[i]->model);
 		fprintf(file, "Backend: %s\n", devices[i]->backend);
-		fprintf(file, "MemorySize: %f\n", devices[i]->size);
-		fprintf(file, "Amount: %d\n", devices[i]->amount);
-		fprintf(file, "ID: %d\n", devices[i]->id);
+		int size = strlen(devices[i]->memory);
+		fprintf(file, "Memory: ");
+		for (int j = 0; j < size; j++)
+		{
+			fprintf(file, "%s ", devices[i]->memory[j]);
+		}
+		fprintf(file, "\n");
+//		fprintf(file, "Amount: %d\n", devices[i]->amount);
+//		fprintf(file, "ID: %d\n", devices[i]->id);
 		fprintf(file, "\n");
 	}
 	fclose(file);

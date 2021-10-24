@@ -16,14 +16,16 @@
  * =====================================================================================
  */
 #include <stdlib.h>
+#include <stdio.h>
+#include <assert.h>
 #include <hwloc.h>
 
 #define MAX 1000
 
-#include "device.h"
-#include "cpu.h"
-#include "gpu.h"
-#include "trace.h"
+#include "headers/device.h"
+#include "headers/cpu.h"
+//#include "headers/gpu.h"
+#include "headers/trace.h"
 
 int main ()
 {
@@ -43,9 +45,9 @@ int main ()
     
     int index = 0;
     index = get_cpus(devices, topology, cpu_object, index);
-    index = get_gpus(devices, topology, gpu_object, index);
+    //index = get_gpus(devices, topology, gpu_object, index);
 	
-	print_to_file(devices, index);    
+//	print_to_file(devices, index);    
     
     free(devices);
 }
