@@ -53,6 +53,10 @@ int get_cpus (struct device** devices, hwloc_topology_t topology, hwloc_obj_t ob
 				// For each child
 				for (int k = 0; k < arity; k++)
 				{
+					if (object->type == HWLOC_OBJ_PU)
+					{
+						break;
+					}
 					hwloc_obj_t current_object = object->children[k];
 					hwloc_obj_type_snprintf(type_current_object, sizeof(type_current_object), current_object, 0);
 					printf("Type: %s\n", type_current_object);
@@ -76,7 +80,8 @@ int get_cpus (struct device** devices, hwloc_topology_t topology, hwloc_obj_t ob
 					{
 						strcpy(devices[index]->compute[compute_counter + k], type_current_object);
 						int cousins = hwloc_get_nbobjs_by_type(topology, object->children[k]->type);
-						strcpy(devices[index]->compute[compute_counter + 1 + k], cousins);
+						sprintf(sarity, "%d", cousins);
+						strcpy(devices[index]->compute[compute_counter + 1 + k], sarity);
 					}
 
 					memory_counter += 3;	
