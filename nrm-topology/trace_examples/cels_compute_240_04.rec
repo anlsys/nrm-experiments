@@ -1,0 +1,35 @@
+ID: 3
+Type: Package
+Name: Intel(R) Xeon(R) CPU E5-2650 0 @ 2.00GHz
+Backend: 
+Memory: L3, 1, 20480, L2, 8, 256, L1d, 8, 32
+Compute: Core, 8, PU, 16
+
+ID: 37
+Type: Package
+Name: Intel(R) Xeon(R) CPU E5-2650 0 @ 2.00GHz
+Backend: 
+Memory: L3, 1, 20480, L2, 8, 256, L1d, 8, 32
+Compute: Core, 8, PU, 16
+
+ID: 240
+Type: GPU
+Name: card1
+Backend: 
+Memory: 
+Compute: 
+
+ID: 243
+Type: GPU
+Name: card0
+Backend: 
+Memory: 
+Compute: 
+
+ID: 242
+Type: GPU
+Name: card2
+Backend: 
+Memory: 
+Compute: 
+
