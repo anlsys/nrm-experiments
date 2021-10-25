@@ -23,25 +23,30 @@ int get_gpus (struct device** devices, hwloc_topology_t topology, hwloc_obj_t ob
 
 	while ((object = hwloc_get_next_osdev(topology, object)) != NULL)
 	{
-		devices[index] = malloc(sizeof(struct device));
-		int i = 0;
-		int id = 0;
-		const char* size = NULL;
-		const char* compute_units = NULL;
-
 		hwloc_obj_type_snprintf(type, sizeof(type), object, 0);
 		if ((strcmp(type, "DMA") == 0) || (strcmp(type, "Block") == 0) || (strcmp(type, "Net") == 0))
 		{
 			continue;
 		}
+		else if (strncmp(object->name, "renderD", 6) == 0)
+		{
+			continue;
+		}
+		
+		devices[index] = malloc(sizeof(struct device));
+		int i = 0;
+		int id = 0;
+		const char* name = NULL;
+		const char* size = NULL;
+		const char* compute_units = NULL;
 
 		const char* model = hwloc_obj_get_info_by_name(object, "GPUModel");
 		const char* backend = hwloc_obj_get_info_by_name(object,"Backend");
 		
 		strcpy(devices[index]->type, type);
-		model != 0 ? strcpy(devices[index]->name, model) : strcpy(devices[index]->name, "None");
-		backend != 0 ? strcpy(devices[index]->backend, backend) : strcpy(devices[index]->backend, "None");
-		devices[index]->resource_id = object->gp_index;		
+		model != NULL ? strcpy(devices[index]->name, model) : strcpy(devices[index]->name, object->name);
+		backend != NULL ? strcpy(devices[index]->backend, backend) : strcpy(devices[index]->backend, "");
+		devices[index]->resource_id = object->gp_index;
 
 		if ((sscanf(object->name, "cuda%d", &id) == 1)
 				|| (sscanf(object->name, "rsmi%d", &id) == 1)
@@ -59,8 +64,8 @@ int get_gpus (struct device** devices, hwloc_topology_t topology, hwloc_obj_t ob
 			size = hwloc_obj_get_info_by_name(object,"OpenCLGlobalMemorySize");
 			compute_units = hwloc_obj_get_info_by_name(object,"OpenCLComputeUnits");
 		}
-		size != NULL ? strcpy(devices[index]->memory[counter], size) : strcpy(devices[index]->memory[counter], "0");
-		compute_units != NULL ? strcpy(devices[index]->compute[counter], compute_units) : strcpy(devices[index]->compute[counter], "0");
+		size != NULL ? strcpy(devices[index]->memory[counter], size) : strcpy(devices[index]->memory[counter], "");
+		compute_units != NULL ? strcpy(devices[index]->compute[counter], compute_units) : strcpy(devices[index]->compute[counter], "");
 		
 		counter++;
 		index++;

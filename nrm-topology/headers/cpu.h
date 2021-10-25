@@ -40,8 +40,8 @@ int get_cpus (struct device** devices, hwloc_topology_t topology, hwloc_obj_t ob
 				const char* backend = hwloc_obj_get_info_by_name(object, "Backend");
 
 				strcpy(devices[index]->type, type);
-				model != NULL ? strcpy(devices[index]->name, model) : strcpy(devices[index]->name, "None");
-				backend != NULL ? strcpy(devices[index]->backend, backend) : strcpy(devices[index]->backend, "None");
+				model != NULL ? strcpy(devices[index]->name, model) : strcpy(devices[index]->name, "");
+				backend != NULL ? strcpy(devices[index]->backend, backend) : strcpy(devices[index]->backend, "");
 				devices[index]->resource_id = object->gp_index;
 
 				int memory_counter = 0;
