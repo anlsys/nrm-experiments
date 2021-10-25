@@ -30,7 +30,7 @@ int get_gpus (struct device** devices, hwloc_topology_t topology, hwloc_obj_t ob
 		const char* compute_units = NULL;
 
 		hwloc_obj_type_snprintf(type, sizeof(type), object, 0);
-		if ((type == "DMA") || (type == "Net") || (type == "Block"))
+		if ((strcmp(type, "DMA") == 0) || (strcmp(type, "Block") == 0) || (strcmp(type, "Net") == 0))
 		{
 			continue;
 		}
