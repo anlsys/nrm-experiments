@@ -30,6 +30,11 @@ int get_gpus (struct device** devices, hwloc_topology_t topology, hwloc_obj_t ob
 		const char* compute_units = NULL;
 
 		hwloc_obj_type_snprintf(type, sizeof(type), object, 0);
+		if ((type == "DMA") || (type == "Net") || (type == "Block"))
+		{
+			continue;
+		}
+
 		const char* model = hwloc_obj_get_info_by_name(object, "GPUModel");
 		const char* backend = hwloc_obj_get_info_by_name(object,"Backend");
 		
