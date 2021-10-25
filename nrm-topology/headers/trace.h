@@ -22,19 +22,43 @@ void print_to_file(struct device** devices, int index)
 	file = fopen("./test.rec", "w+"); // GNU Recutils format
 	for (int i = 0; i < index; i++)
 	{
+		fprintf(file, "ID: %d\n", devices[i]->resource_id);
 		fprintf(file, "Type: %s\n", devices[i]->type);
 		fprintf(file, "Name: %s\n", devices[i]->name);
-//		fprintf(file, "Model: %s\n", devices[i]->model);
 		fprintf(file, "Backend: %s\n", devices[i]->backend);
-		int size = strlen(devices[i]->memory);
 		fprintf(file, "Memory: ");
-		for (int j = 0; j < size; j++)
+		for (int j = 0; j < MAX; j++)
 		{
-			fprintf(file, "%s ", devices[i]->memory[j]);
+			if (strlen(devices[i]->memory[j]) != 0)
+			{
+				if (j != 0)
+				{
+					fprintf(file, ", ");
+				}
+				fprintf(file, "%s", devices[i]->memory[j]);
+			}
+			else
+			{
+				break;
+			}
 		}
 		fprintf(file, "\n");
-//		fprintf(file, "Amount: %d\n", devices[i]->amount);
-//		fprintf(file, "ID: %d\n", devices[i]->id);
+		fprintf(file, "Compute: ");
+		for (int j = 0; j < MAX; j++)
+		{
+			if (strlen(devices[i]->compute[j]) != 0)
+			{
+				if (j != 0)
+				{
+					fprintf(file, ", ");
+				}
+				fprintf(file, "%s", devices[i]->compute[j]);
+			}
+			else
+			{
+				break;
+			}
+		}
 		fprintf(file, "\n");
 	}
 	fclose(file);

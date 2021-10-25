@@ -20,7 +20,7 @@
 #include <assert.h>
 #include <hwloc.h>
 
-#define MAX 1000
+#define MAX 32
 
 #include "headers/device.h"
 #include "headers/cpu.h"
@@ -47,9 +47,10 @@ int main ()
     index = get_cpus(devices, topology, cpu_object, index);
     //index = get_gpus(devices, topology, gpu_object, index);
 	
-//	print_to_file(devices, index);    
+	print_to_file(devices, index);    
     
     free(devices);
+	devices = NULL;
 }
 
 
