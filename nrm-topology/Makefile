@@ -1,9 +1,9 @@
 CC = gcc
-CFLAGS = -Wall
+CFLAGS = -g -Wall
 LFLAGS = -lhwloc
 
 TARGET = topology
-OUTPUT = test.log
+OUTPUT = test.rec
 
 all: $(TARGET)
 
