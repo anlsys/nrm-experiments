@@ -24,7 +24,7 @@
 
 #include "headers/device.h"
 #include "headers/cpu.h"
-//#include "headers/gpu.h"
+#include "headers/gpu.h"
 #include "headers/trace.h"
 
 int main ()
@@ -45,7 +45,7 @@ int main ()
     
     int index = 0;
     index = get_cpus(devices, topology, cpu_object, index);
-    //index = get_gpus(devices, topology, gpu_object, index);
+    index = get_gpus(devices, topology, gpu_object, index);
 	
 	print_to_file(devices, index);    
     

@@ -60,6 +60,7 @@ void print_to_file(struct device** devices, int index)
 			}
 		}
 		fprintf(file, "\n");
+		fprintf(file, "\n");
 	}
 	fclose(file);
 }

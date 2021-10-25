@@ -19,51 +19,45 @@
 int get_gpus (struct device** devices, hwloc_topology_t topology, hwloc_obj_t object, int index)
 {
 	char type[STR_SIZE];
+	int counter = 0;
 
 	while ((object = hwloc_get_next_osdev(topology, object)) != NULL)
 	{
 		devices[index] = malloc(sizeof(struct device));
 		int i = 0;
 		int id = 0;
-		const char* size;
+		const char* size = NULL;
+		const char* compute_units = NULL;
 
 		hwloc_obj_type_snprintf(type, sizeof(type), object, 0);
 		const char* model = hwloc_obj_get_info_by_name(object, "GPUModel");
-		if (model == NULL)
-		{
-			model = "None";
-		}
 		const char* backend = hwloc_obj_get_info_by_name(object,"Backend");
-		if (backend== NULL)
-		{
-			backend = "None";
-		}
-		int amount = hwloc_get_nbobjs_by_type(topology, HWLOC_OBJ_OS_DEVICE);
-
+		
 		strcpy(devices[index]->type, type);
-		strcpy(devices[index]->name, object->name);
-		strcpy(devices[index]->model, model);
-		strcpy(devices[index]->backend, backend);
+		model != 0 ? strcpy(devices[index]->name, model) : strcpy(devices[index]->name, "None");
+		backend != 0 ? strcpy(devices[index]->backend, backend) : strcpy(devices[index]->backend, "None");
+		devices[index]->resource_id = object->gp_index;		
 
 		if ((sscanf(object->name, "cuda%d", &id) == 1)
 				|| (sscanf(object->name, "rsmi%d", &id) == 1)
-				|| (sscanf(object->name, "nvml%d", &id) == 1))
+				|| (sscanf(object->name, "nvml%d", &id) == 1)
+				|| (sscanf(object->name, "ve%d", &id) == 1)
+				|| (sscanf(object->name, "ze%d", &id) == 1)
+				|| (sscanf(object->name, "card%d", &id) == 1)
+				|| (sscanf(object->name, "renderD%d", &id) == 1))
 		{
 			size = hwloc_obj_get_info_by_name(object,"CUDAGlobalMemorySize");
-			devices[index]->id = id;
+			compute_units = hwloc_obj_get_info_by_name(object,"CUDAMultiProcessors");
 		}
 		else if (sscanf(object->name, "opencl%dd%d", &i, &id) == 2)
 		{
 			size = hwloc_obj_get_info_by_name(object,"OpenCLGlobalMemorySize");
-			devices[index]->id = id;
+			compute_units = hwloc_obj_get_info_by_name(object,"OpenCLComputeUnits");
 		}
-		if (size == NULL)
-		{
-			size = "0";
-		}	
-		devices[index]->size = atoi(size);
-		devices[index]->amount = amount;
-
+		size != NULL ? strcpy(devices[index]->memory[counter], size) : strcpy(devices[index]->memory[counter], "0");
+		compute_units != NULL ? strcpy(devices[index]->compute[counter], compute_units) : strcpy(devices[index]->compute[counter], "0");
+		
+		counter++;
 		index++;
 	}
 	return index;
