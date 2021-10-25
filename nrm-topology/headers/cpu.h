@@ -35,6 +35,7 @@ int get_cpus (struct device** devices, hwloc_topology_t topology, hwloc_obj_t ob
 			{
 				devices[index] = malloc(sizeof(struct device));
 
+				int nb_of_packages = hwloc_get_nbobjs_by_type(topology, object->type);
 				const char* model = hwloc_obj_get_info_by_name(object, "CPUModel");
 				const char* backend = hwloc_obj_get_info_by_name(object, "Backend");
 
@@ -61,8 +62,8 @@ int get_cpus (struct device** devices, hwloc_topology_t topology, hwloc_obj_t ob
 					if (hwloc_obj_type_is_cache(current_object->type))
 					{
 						strcpy(devices[index]->memory[memory_counter], type_current_object);
-						int cousins = hwloc_get_nbobjs_by_type(topology, object->children[k]->type);
-						sprintf(cousins_to_string, "%d", cousins);
+						int cousins = hwloc_get_nbobjs_by_type(topology, current_object->type);
+						sprintf(cousins_to_string, "%d", cousins/nb_of_packages);
 						strcpy(devices[index]->memory[memory_counter + 1], cousins_to_string);
 						size = ((double)current_object->attr->cache.size / 1024);
 						sprintf(size_to_string, "%llu", size);
@@ -73,8 +74,8 @@ int get_cpus (struct device** devices, hwloc_topology_t topology, hwloc_obj_t ob
 					else
 					{
 						strcpy(devices[index]->compute[compute_counter], type_current_object);
-						int cousins = hwloc_get_nbobjs_by_type(topology, object->children[k]->type);
-						sprintf(cousins_to_string, "%d", cousins);
+						int cousins = hwloc_get_nbobjs_by_type(topology, current_object->type);
+						sprintf(cousins_to_string, "%d", cousins/nb_of_packages);
 						strcpy(devices[index]->compute[compute_counter + 1], cousins_to_string);
 						
 						compute_counter += 2;	
