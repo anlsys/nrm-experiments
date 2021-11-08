@@ -60,18 +60,6 @@ int get_cpus (struct device** devices, hwloc_topology_t topology, hwloc_obj_t ob
 					hwloc_obj_type_snprintf(type_current_object, sizeof(type_current_object), current_object, 0);
 
 					hwloc_obj_t core_object = current_object;
-					while (core_object->type == HWLOC_OBJ_CORE)
-					{
-						core_arity += core_object->arity;
-						if (core_object->next_cousin == NULL)
-						{
-							break;
-						}
-						else
-						{
-							core_object = core_object->next_cousin;
-						}
-					}
 
 					if (hwloc_obj_type_is_cache(current_object->type))
 					{
@@ -96,7 +84,7 @@ int get_cpus (struct device** devices, hwloc_topology_t topology, hwloc_obj_t ob
 						{
 							sprintf(logical_index_to_string, "%d", current_object->logical_index);
 							strcpy(devices[index]->logical_index[li_counter], logical_index_to_string);
-							if (current_object->next_cousin != NULL && li_counter < core_arity)
+							if (current_object->next_cousin != NULL && li_counter < compute_units/nb_of_packages)
 							{
 								current_object = current_object->next_cousin;
 								li_counter++;
