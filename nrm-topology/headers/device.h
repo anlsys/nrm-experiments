@@ -26,5 +26,6 @@ struct device
     char backend[STR_SIZE];
 	char memory[MAX][STR_SIZE];
 	char compute[MAX][STR_SIZE];
+	char logical_index[MAX][STR_SIZE];
 };
 

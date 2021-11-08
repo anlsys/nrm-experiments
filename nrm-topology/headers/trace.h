@@ -60,6 +60,23 @@ void print_to_file(struct device** devices, int index)
 			}
 		}
 		fprintf(file, "\n");
+		fprintf(file, "LogicalIndex: ");
+		for (int j = 0; j < MAX; j++)
+		{
+			if (strlen(devices[i]->logical_index[j]) != 0)
+			{
+				if (j != 0)
+				{
+					fprintf(file, ", ");
+				}
+				fprintf(file, "%s", devices[i]->logical_index[j]);
+			}
+			else
+			{
+				break;
+			}
+		}
+		fprintf(file, "\n");
 		fprintf(file, "\n");
 	}
 	fclose(file);

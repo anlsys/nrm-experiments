@@ -4,6 +4,7 @@ Name: Intel(R) Core(TM) i5-8257U CPU @ 1.40GHz
 Backend: 
 Memory: L3, 1, 6144, L2, 4, 256, L1d, 4, 32
 Compute: Core, 4, PU, 8
+LogicalIndex: 0, 1, 2, 3, 4, 5, 6, 7
 
 ID: 25
 Type: CoProc
@@ -11,4 +12,5 @@ Name: Intel(R) Iris(TM) Plus Graphics 645
 Backend: OpenCL
 Memory: 1572864
 Compute: 48
+LogicalIndex: 
 

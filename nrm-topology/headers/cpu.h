@@ -46,7 +46,7 @@ int get_cpus (struct device** devices, hwloc_topology_t topology, hwloc_obj_t ob
 
 				int memory_counter = 0;
 				int compute_counter = 0;
-				char compute_units_to_string[STR_SIZE], size_to_string[STR_SIZE];
+				char compute_units_to_string[STR_SIZE], size_to_string[STR_SIZE], logical_index_to_string[STR_SIZE];
 
 				int arity = object->arity;
 				for (int k = 0; k < arity; k++)
@@ -76,7 +76,21 @@ int get_cpus (struct device** devices, hwloc_topology_t topology, hwloc_obj_t ob
 						int compute_units = hwloc_get_nbobjs_by_type(topology, current_object->type);
 						sprintf(compute_units_to_string, "%d", compute_units/nb_of_packages);
 						strcpy(devices[index]->compute[compute_counter + 1], compute_units_to_string);
-						
+						int li_counter = 0;
+						while (current_object->type == HWLOC_OBJ_PU)
+						{
+							sprintf(logical_index_to_string, "%d", current_object->logical_index);
+							strcpy(devices[index]->logical_index[li_counter], logical_index_to_string);
+							if (current_object->next_cousin != NULL)
+							{
+								current_object = current_object->next_cousin;
+								li_counter++;
+							}
+							else
+							{
+								break;
+							}
+						}
 						compute_counter += 2;	
 					}
 					object = object->children[k];
