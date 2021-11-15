@@ -53,7 +53,8 @@ cat <<ENDFILE > $cmd_manifest
     "app": {
 	"perfwrapper": {
 	    "perfLimit": 100000,
-	    "perfFreq": {"hertz": 10}
+	    "perfFreq": {"hertz": 10},
+	    "perfEvent" : "instructions"
 	}
     }
 }
