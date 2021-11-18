@@ -7,3 +7,13 @@ add/*.c
 copy/*.c
 scale/*.c
 triad/*.c
+
+add/setup.py
+copy/setup.py
+scale/setup.py
+triad/setup.py
+
+add/pmake*
+copy/pmake*
+scale/pmake*
+triad/pmake*

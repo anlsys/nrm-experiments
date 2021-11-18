@@ -4,6 +4,11 @@ from cython.parallel import prange, parallel
 cimport cython.parallel
 cimport openmp
 import time
+import sys 
+import os
+
+sys.path.append(os.path.realpath("../../../nrm-python/nrm"))
+from progress import Progress
 
 def scale(long size):
         cdef int *a = <int*> malloc(size * sizeof(int))
@@ -13,6 +18,9 @@ def scale(long size):
         cdef int MAX_ITER = 1000
         cdef int i, it
 
+        prog = Progress()
+        prog.setup()
+        
         for i in prange(1, nogil=True):
             num_threads = openmp.omp_get_num_threads()
 
@@ -24,8 +32,10 @@ def scale(long size):
         for it in range(MAX_ITER):
             for i in prange(size, nogil=True):
                 b[i] = scalar * a[i]
+            prog.progress_report(1)
         end = int(round(time.time() * 1000))
 
+        prog.shutdown()
         res = (end-start)/MAX_ITER
         size = (size*8)/1000000
         assert(b[0] == 3)
