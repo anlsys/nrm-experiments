@@ -10,5 +10,6 @@ mkShell {
     nrm-extra
     hwloc
     linuxPackages.perf
+    pystream
   ];
 }
