@@ -5,5 +5,6 @@ python3Packages.buildPythonPackage {
   buildInputs = [];
   propagatedBuildInputs = [
     nrm-python
+    python3Packages.cython
   ];
 }
