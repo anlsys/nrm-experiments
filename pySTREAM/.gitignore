@@ -2,3 +2,8 @@ add/build
 copy/build
 scale/build
 triad/build
+
+add/*.c
+copy/*.c
+scale/*.c
+triad/*.c

@@ -1,2 +1,2 @@
-import copy
-copy.copy(30000000)
+import pcopy
+pcopy.pcopy(30000000)

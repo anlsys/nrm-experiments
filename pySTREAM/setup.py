@@ -10,7 +10,7 @@ ext_modules=[
  		extra_compile_args=['-fopenmp'],
 		extra_link_args=['-fopenmp'],),
 	
-	Extension("copy",         ["copy/copy.pyx"],
+	Extension("pcopy",         ["copy/pcopy.pyx"],
  		extra_compile_args=['-fopenmp'],
 		extra_link_args=['-fopenmp'],),
 	

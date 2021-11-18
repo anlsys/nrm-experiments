@@ -5,7 +5,7 @@ cimport cython.parallel
 cimport openmp
 import time
 
-def copy(long size):
+def pcopy(long size):
         cdef int *a = <int*> malloc(size * sizeof(int))
         cdef int *b = <int*> malloc(size * sizeof(int))
         cdef int num_threads
