@@ -8,4 +8,5 @@ pkgs // rec {
   nrm-python = pkgs.callPackage ./nix/nrm-python.nix { inherit nrm-core; };
   nrm-extra = pkgs.callPackage ./nix/nrm-extra.nix { inherit libnrm; openmp = nrm-extra-pkgs.llvmPackages_12.openmp; };
   pystream = pkgs.callPackage ./nix/pystream.nix { inherit nrm-python; };
+  nrm-benchmarks = pkgs.callPackage ./nix/nrm-benchmarks.nix {inherit libnrm; openmp = pkgs.llvmPackages.openmp; };
 }

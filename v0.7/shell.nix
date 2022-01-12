@@ -11,5 +11,7 @@ mkShell {
     hwloc
     linuxPackages.perf
     pystream
+    nrm-benchmarks
+    mpich2
   ];
 }

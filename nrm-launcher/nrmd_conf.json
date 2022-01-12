@@ -1,0 +1,19 @@
+{
+    "verbose": "Info",
+    "logfile": "nrmd.log",
+    "controlCfg": "ControlOff",
+    "raplCfg": {
+        "referencePower": {
+            "microwatts": 100000000
+        },
+        "raplActions": [
+            {
+                "microwatts": 100000000
+            }
+        ],
+        "raplPath": "/sys/devices/virtual/powercap/intel-rapl"
+    },
+    "passiveSensorFrequency": {
+        "hertz": 1
+    }
+}

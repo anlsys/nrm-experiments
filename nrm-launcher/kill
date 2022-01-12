@@ -1,0 +1,1 @@
+kill $(ps aux | grep nrm | awk {'print($2)'} | awk 'FNR == 1 {print}')
