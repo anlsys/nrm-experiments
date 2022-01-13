@@ -4,6 +4,8 @@ stdenv.mkDerivation {
     url = "https://github.com/anlsys/libnrm.git";
   };
   name = "libnrm";
-  nativeBuildInputs = [ autoreconfHook pkgconfig ];
-  buildInputs = [ zeromq gfortran ];
+  dontStrip = true;
+  nativeBuildInputs = [ autoreconfHook pkgconfig gfortran ];
+  propagatedBuildInputs = [ zeromq ];
+  CFLAGS = "-ggdb -O0";
 }

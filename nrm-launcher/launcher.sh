@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ######## Only modify this variable to switch between benchmarks ###########
 dir=~/Argonne/nrm-experiments/mpi

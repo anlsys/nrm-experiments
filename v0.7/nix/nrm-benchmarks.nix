@@ -1,7 +1,9 @@
-{ stdenv, autoreconfHook, pkgconfig, libnrm, zeromq, gfortran, openmp }:
+{ stdenv, autoreconfHook, pkgconfig, libnrm, openmp }:
 stdenv.mkDerivation {
   src = ~/Argonne/nrm-benchmarks;
   name = "nrm-benchmarks";
-  nativeBuildInputs = [ autoreconfHook pkgconfig libnrm openmp ];
-  buildInputs = [ zeromq gfortran ] ++ libnrm.buildInputs;
+  nativeBuildInputs = [ autoreconfHook pkgconfig openmp ];
+  buildInputs = [ libnrm ];
+  CFLAGS = "-ggdb -O0";
+  dontStrip = true;
 }

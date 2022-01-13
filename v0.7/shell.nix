@@ -7,11 +7,13 @@ mkShell {
     nrm-core
     nrm-python
     libnrm
-    nrm-extra
+    #nrm-extra
     hwloc
     linuxPackages.perf
     pystream
     nrm-benchmarks
     mpich2
+    gdb
+    valgrind
   ];
 }
