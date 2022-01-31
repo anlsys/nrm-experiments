@@ -2,6 +2,7 @@
 python3Packages.buildPythonPackage {
   src = fetchGit {
     url = "https://github.com/anlsys/nrm-python.git";
+    ref = "refs/tags/v0.7.0";
   };
   name = "nrm-python";
   buildInputs = [ nrm-core ];
@@ -17,7 +18,7 @@ python3Packages.buildPythonPackage {
   ];
   preBuild = ''
     substituteInPlace bin/nrmd \
-      --replace "os.environ[\"NRMSO\"]" \"${nrm-core}/lib/ghc-8.6.5/libnrm-core.so\"
+      --replace "os.environ.get(\"NRMSO\")" \"${nrm-core}/lib/ghc-8.6.5/libnrm-core.so\"
     substituteInPlace nrm/tooling.py \
       --replace "os.environ.get(\"PYNRMSO\")" \"${nrm-core}/lib/ghc-8.6.5/libnrm-core-python.so\"
   '';
