@@ -26,9 +26,25 @@ A = np.array([[0, 1], [-omega_1**2, -2*omega_1*zeta_1]])
 B = np.array([[0],[omega_1**2]]).reshape(2, 1)
 dt = 0.01
 
+
+a = {'gros':0.83,'dahu':0.94,'yeti':0.89}
+b = {'gros':7.07,'dahu':0.17,'yeti':2.91}
+alpha = {'gros':0.047,'dahu':0.032,'yeti':0.023}
+beta = {'gros':28.5,'dahu':34.8,'yeti':33.7}
+K_L = {'gros':25.6,'dahu':42.4,'yeti':78.5}
+# analytically found parameter
+tau = 0.33
+
+fig, axs = plt.subplots(2)
+fig.suptitle('power and performance against time')
+
 def pm(x, t, mag_1, omega_1):
     u = mag_1*np.sin(omega_1*t)
     return np.dot(A, x) + np.dot(B, u)
+
+def progress_funct(p_now,p_cap):
+    p_next = K_L['gros']*dt/(dt+tau)*p_cap+tau/(dt+tau)*p_now
+    return p_next
 
 # def main():
 #     dt = 0.01
@@ -62,17 +78,19 @@ class Custom_env(Env):
     def __init__(self):
         # Actions we can are set of pcaps between 0 - 1
 #         self.action_space = Discrete(3)
-        self.action_space = Box(low=np.array([0,0]),high = np.array([1,1]))
+#         self.action_space = Box(low=np.array([0,0]),high = np.array([1,1]))
+        self.action_space = Box(low=np.float32(np.array([0.40])), high=np.float32(np.array([1.20])))
         # Observation of the current performance (state space)
-        self.observation_space = Box(low=np.array([[0],[0]]), high=np.array([[10],[10]]))
+        self.observation_space = Box(low=np.float32(np.array([0])), high=np.float32(np.array([0.60])))
         # Set starting space
-        self.state = np.random.rand(2,1)
+        self.state = np.random.rand(1,1)
         # Set execution length
-        self.execution_time = 10
+        self.execution_time = 100
         self.current_step = 0
+        self.action = None
         
     def step(self, action):
-        dt = 0.01
+        # dt = 0.01
 #         if action == 0:
 #             mag = 1
 #             omega = 1
@@ -82,16 +100,17 @@ class Custom_env(Env):
 #         else:
 #             mag = -1
 #             omega = -1
-        mag = action[0]
-        omega = action[1]
-        x_res_train, infodict = odeintw(pm, self.state, np.array([0,dt]), args=( mag, omega),
-                              full_output=True)
+
+        # x_res_train, infodict = odeintw(pm, self.state, np.array([0,dt]), args=( mag, omega),
+        #                       full_output=True)
         # Apply action
-        self.state = x_res_train[-1,:] 
+        new_state = progress_funct(self.state,action)
+        self.state = new_state
+        self.action = action
 #         print(x_res_train,"++",self.state)
         
         # Calculate reward
-        reward = np.linalg.norm(self.state ** 2 - action ** 2)
+        reward = np.linalg.norm(self.state - action)
         
         # Check if the sim is done
 #         print(T,self.execution_time)
@@ -104,20 +123,26 @@ class Custom_env(Env):
         self.current_step+=1
         return self.state, reward, done, info
 
-    def render(self):
-        plt.figure(1)
-        plt.plot(self.state[0], self.state[1],'ro')
-        plt.xlabel('x_1')
-        plt.ylabel("x_2")
-        # plt.legend(loc='best')
-        plt.draw()
+    def render(self,time):
+        # plt.figure(1)
+        # plt.plot(time,self.action,'ro')
+        # plt.plot(time,self.state,'go')
+        # plt.xlabel('time step')
+        # plt.ylabel('power, performance')
+        # # plt.legend(loc='best')
+        # plt.draw()
+        axs[0].plot(time,self.state,'go')
+        axs[0].set(xlabel = 'time',ylabel = 'performance')
+        axs[1].plot(time,self.action,'ro')
+        axs[1].set(xlabel = 'time',ylabel = 'power cap')
+        # plt.draw()
     
     def reset(self):
         # Reset shower temperature
-        self.state = np.random.rand(2,1)
+        self.state = np.random.rand(1,1)
         # print(self.state)
         # Reset shower time
-        self.execution_time = 10
+        self.execution_time = 100
         self.current_step = 0
         return self.state
     
@@ -164,7 +189,7 @@ print(test_obs.shape)
 
 
 model = PPO("MlpPolicy", env, verbose=1)
-model.learn(total_timesteps=50000)
+model.learn(total_timesteps=10000)
 # print("execution completed")
 # model.save("dynamics")
 
@@ -183,6 +208,6 @@ while count < 100:
     obs, rewards, dones, info = env.step(action)
     # print(obs)
     count += 1
-    env.render()
+    env.render(count)
 
 plt.show()
