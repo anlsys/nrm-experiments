@@ -35,8 +35,7 @@ K_L = {'gros':25.6,'dahu':42.4,'yeti':78.5}
 # analytically found parameter
 tau = 0.33
 
-fig, axs = plt.subplots(2)
-fig.suptitle('power and performance against time')
+
 
 def pm(x, t, mag_1, omega_1):
     u = mag_1*np.sin(omega_1*t)
@@ -70,7 +69,8 @@ def progress_funct(p_now,p_cap):
 # if __name__ == "__main__":
 #     main()
 
-
+fig, axs = plt.subplots(2)
+fig.suptitle('power and performance against time')
 # In[62]:
 
 
@@ -110,8 +110,8 @@ class Custom_env(Env):
 #         print(x_res_train,"++",self.state)
         
         # Calculate reward
-        reward = np.linalg.norm(self.state - action)
-        
+        reward = np.linalg.norm(self.state) - np.linalg.norm(action**2)
+        self.R = reward
         # Check if the sim is done
 #         print(T,self.execution_time)
         if self.current_step >= self.execution_time:
@@ -120,7 +120,9 @@ class Custom_env(Env):
             done = False
         
         info = {}
+        # self.render(self.current_step)
         self.current_step+=1
+
         return self.state, reward, done, info
 
     def render(self,time):
@@ -135,15 +137,22 @@ class Custom_env(Env):
         axs[0].set(xlabel = 'time',ylabel = 'performance')
         axs[1].plot(time,self.action,'ro')
         axs[1].set(xlabel = 'time',ylabel = 'power cap')
+
+        self.total += self.R
+        self.cost += self.action
         # plt.draw()
     
     def reset(self):
+        # fig, axs = plt.subplots(2)
+        # fig.suptitle('power and performance against time')
         # Reset shower temperature
         self.state = np.random.rand(1,1)
         # print(self.state)
         # Reset shower time
-        self.execution_time = 100
+        self.execution_time = 10
         self.current_step = 0
+        self.total = 0
+        self.cost = 0
         return self.state
     
 
@@ -189,7 +198,7 @@ print(test_obs.shape)
 
 
 model = PPO("MlpPolicy", env, verbose=1)
-model.learn(total_timesteps=10000)
+model.learn(total_timesteps=1000000)
 # print("execution completed")
 # model.save("dynamics")
 
@@ -210,4 +219,5 @@ while count < 100:
     count += 1
     env.render(count)
 
+print(env.cost,env.total)
 plt.show()
