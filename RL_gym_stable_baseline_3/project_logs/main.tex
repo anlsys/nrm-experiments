@@ -1,0 +1,113 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{cite}
+\usepackage{natbib}
+% \usepackage{biblatex}
+
+\usepackage[%
+	cache=false,
+	kpsewhich=true,
+]{minted}  % requires pygmentize
+
+\newmintedfile%
+[scriptexcerpt]%
+{bash}{%
+	linenos,
+	frame=lines,
+	framesep=2ex,
+	fontsize=\scriptsize,
+	breaklines,
+}
+\newmintedfile%
+[pyexcerpt]%
+{python}{%
+	linenos,
+	frame=lines,
+	framesep=2ex,
+	fontsize=\scriptsize,
+	breaklines,
+}
+\newmintedfile%
+[Rexcerpt]%
+{R}{%
+	linenos,
+	frame=lines,
+	framesep=2ex,
+	fontsize=\scriptsize,
+	breaklines,
+}
+
+\title{ANL project logs}
+\author{Akhilesh Raj}
+\date{June 2022}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+ARGO project deals with High Performance Computing (HPC) device power optimization assuring that the performance is not compromised. The project developed into the current shape where the optimization of power and performance is achieved using control algorithms. The initial works \cite{cerf2021sustaining} dealt with modeling and deploying classic control techniques while the most recent one dealt with the uncertainties and modeling errors using adaptive control techniques.
+
+This document is logging ongoing efforts on the given problem statement, using Reinforcement Learning. Section \ref{organization} will give the outline of the file organization. Section \ref{requirements} will give you the requirements to execute the file and experiments. Section \ref{updates} will be constantly updated to keep a track on the ongoing changes and weekly meeting updates.
+
+\section{Archive Organization} \label{organization}
+The files are hosted in the git repository \href{git@github.com:anlsys/nrm-experiments.git}{NRM-Experiments} where one can checkout the branch RL\_akhilesh to get access to the folder titled 
+\newline RL\_gym\_stable\_baseline\_3. The files inside are organized as follows:
+\begin{itemize}
+    \item \texttt{gym\_envs.py} contains the main code to simulate the experiment;
+    \item \texttt{figures} contains the figures that can be compared to get performance measure.
+    \item \texttt{requirements.txt} contains packages to build the environment for simulation. 
+\end{itemize}
+
+
+\section{Requirements} \label{requirements}
+The following are the requirements for executing the code. It is advised to create a new python3 environment. I am using anaconda as my python environment manager.
+\begin{minted}{console}
+$ conda create --name new_RL_env python=3.10
+$ conda activate new_RL_env
+\end{minted}
+Install the dependencies inside the newly created RL using the command:
+\begin{minted}{console}
+(new_RL_env) $ pip install -r requirements.txt
+\end{minted}
+
+The file \texttt{requirements.txt} contain the following packages
+\scriptexcerpt[label=requirements.txt]{requirements.txt}
+
+\section{Ongoing work} \label{updates}
+
+From this section on-wards the logs will be dated to keep a track on the progress of the work.
+\subsection{June $2^{nd}$ 2022}
+The monolith code framework for the approach to the problem statement was prepared and executed. We are using \texttt{stable-baseline3} as the RL tool package and approaching the problem using Deep Deterministic Policy gradient (DDPG) method. The environment of the code was prepared using \texttt{OpenAI gym} and the class definitions are given in the code \texttt{gym\_envs.py}. The environment class consists of the following:
+\begin{itemize}
+    \item A continuous time action space definition.
+    \item A continuous time observation space definition.
+    \item A variable \texttt{execution\_time} to determine the execution time for each of the episode.
+    \item A function definition outside the class to generate data for the training model. In this code we are using thhe first order expression given in the paper \cite{cerf2021sustaining} to generate the environment variables using the sampled action.
+    \item In the class function named \texttt{step} we call the environment function and execute the action which will give the next state and the reward which are the return variables.
+    \item In the observation space so far we have considered only the performance metric of the function. In the upcoming task we need to include the consumed power and the input action in-order to correctly model the rewards.
+    \item The reward function depends only on maximizing the instantaneous performance and minimizing the power cap.
+    \item The episode stopping condition is now implemented based on the execution time which is assumed to be constant. The status is stored inside the variable \texttt{done} which will be returned towards the end of each step.
+    \item The return variables from the step include the computed next state, reward and the status of the episode.
+    \item The last function, the reset function will keep the above mentioned variables initialized towards the end of each episode. This function is called towards the beginning of each episode to initialize the environment variables.
+    \item The function, \texttt{render} will take in the variables at each instants it is being called to give a visualization of training or testing.
+\end{itemize}
+
+
+\subsubsection{Next week tasks}
+\begin{enumerate}
+    \item Make the observation space include the net power utilized by the node. Utilize the mathematical expression given in the paper \cite{cerf2021sustaining}. This is the expression for the total power utilized by the system from the given power cap towards the progress. It is a maximization term.
+    \item Import the functions from the data processing part of the parent code to generate a reasonable power cap and performance metrics that could be used to compare the models.
+    \item Also find the part in the code which we can use to pull out the values for current progress report.
+    \item Change the stopping condition taking into account the execution time and keep that as a part of the reward. We are trying to minimize the execution time by measuring the heart beats. So the stopping condition will always be attempted to obtain faster. Number of progress steps needed can be a good count.
+    \item Formulate the evaluation part of the result just as been displayed in the two papers. It is always better to compare the existing results with the same evaluation metric.
+    \item Keep the status log updated.
+    
+\end{enumerate}
+
+
+\bibliographystyle{unsrt}
+\bibliography{references}
+
+\end{document}

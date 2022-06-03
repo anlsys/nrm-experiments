@@ -12,7 +12,7 @@ from odeintw import odeintw
 import matplotlib.pyplot as plt
 from odeintw import odeintw
 from stable_baselines3 import PPO
-
+from datetime import datetime
 
 # In[3]:
 
@@ -198,7 +198,7 @@ print(test_obs.shape)
 
 
 model = PPO("MlpPolicy", env, verbose=1)
-model.learn(total_timesteps=1000000)
+model.learn(total_timesteps=10000)
 # print("execution completed")
 # model.save("dynamics")
 
@@ -219,5 +219,9 @@ while count < 100:
     count += 1
     env.render(count)
 
+now = datetime.now()
+
 print(env.cost,env.total)
+
+plt.savefig("./Figures/Figure_"+str(now)+".png")
 plt.show()
