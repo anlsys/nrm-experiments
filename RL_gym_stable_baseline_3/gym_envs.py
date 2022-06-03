@@ -173,7 +173,7 @@ env.action_space.sample()
 
 
 test_obs = env.observation_space.sample()
-print(test_obs.shape)
+# print(test_obs.shape)
 
 # In[66]:
 
