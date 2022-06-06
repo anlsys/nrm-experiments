@@ -12,31 +12,23 @@ import seaborn as sns
 
 exp_type = 'identification'
 experiment_type = exp_type
-experiment_dir = '/home/akhilesh.raj/Desktop/ANL_repo/europar-96-artifacts/dataset/'+exp_type+'/experiments-data/'
+# experiment_dir = '/home/akhilesh.raj/Desktop/ANL_repo/europar-96-artifacts/dataset/'+exp_type+'/experiments-data/'
+experiment_dir = '/Users/akhilesh/Desktop/europar-96-artifacts/dataset/'+exp_type+'/experiments-data/'
 clusters = next(os.walk(experiment_dir))[1]
 
 
 traces = {}
 traces_tmp = {}
 
-print(clusters)
-
 cluster = 'gros'
-
 traces[cluster] = pd.DataFrame()
-
 traces[cluster][0] = next(os.walk(experiment_dir+cluster))[1]
-
 data = {}
 
 data[cluster] = {}
 for trace in traces[cluster][0]:
     data[cluster][trace] = {}
     folder_path = experiment_dir + cluster + '/' + trace
-    if os.path.isfile(folder_path + '/SUCCESS'):
-        data[cluster][trace]['SUCCESS'] = True
-    else:
-        data[cluster][trace]['SUCCESS'] = False
     if os.path.isfile(folder_path + '/parameters.yaml'):
         with open(folder_path + "/parameters.yaml") as file:
             data[cluster][trace]['parameters'] = yaml.load(file, Loader=yaml.FullLoader)
@@ -78,7 +70,7 @@ for trace in traces[cluster][0]:
 
     data[cluster][trace]['first_sensor_point'] = min(data[cluster][trace]['rapl_sensors']['timestamp'][0],
                                                      data[cluster][trace]['performance_sensors']['timestamp'][
-                                                         0])  # , data[cluster][trace]['nrm_downstream_sensors']['timestamp'][0])
+                                                         0])
     data[cluster][trace]['rapl_sensors']['elapsed_time'] = (
                 data[cluster][trace]['rapl_sensors']['timestamp'] - data[cluster][trace]['first_sensor_point'])
     data[cluster][trace]['rapl_sensors'] = data[cluster][trace]['rapl_sensors'].set_index('elapsed_time')
@@ -89,13 +81,7 @@ for trace in traces[cluster][0]:
 
 
 for trace in traces[cluster][0]:
-    avg0 = data[cluster][trace]['rapl_sensors']['value0'].mean()
-    avg1 = data[cluster][trace]['rapl_sensors']['value1'].mean()
-    avg2 = data[cluster][trace]['rapl_sensors']['value2'].mean()
-    avg3 = data[cluster][trace]['rapl_sensors']['value3'].mean()
-    data[cluster][trace]['aggregated_values'] = {'rapl0':avg0,'rapl1':avg1,'rapl2':avg2,'rapl3':avg3,'progress':data[cluster][trace]['performance_sensors']['progress']}#'rapl0_std':std0,'rapl1_std':std1,'rapl2_std':std2,'rapl3_std':std3,'downstream':data[cluster][trace]['nrm_downstream_sensors']['downstream'].mean(),'progress':data[cluster][trace]['performance_sensors']['progress']}
-    avgs = pd.DataFrame({'averages':[avg0, avg1, avg2, avg3]})
-    data[cluster][trace]['aggregated_values']['rapls'] = avgs.mean()[0]
+    data[cluster][trace]['aggregated_values'] = {'progress':data[cluster][trace]['performance_sensors']['progress']}
 
     rapl_elapsed_time = data[cluster][trace]['rapl_sensors'].index
     data[cluster][trace]['aggregated_values']['rapls_periods'] = pd.DataFrame([rapl_elapsed_time[t]-rapl_elapsed_time[t-1] for t in range(1,len(rapl_elapsed_time))], index=[rapl_elapsed_time[t] for t in range(1,len(rapl_elapsed_time))], columns=['periods'])
@@ -119,12 +105,7 @@ for trace in traces[cluster][0]:
              else:
                  data[cluster][trace]['aggregated_values']['pcap'] = data[cluster][trace]['aggregated_values']['pcap'].append({'pcap':int(data[cluster][trace]['enforce_powercap']['powercap'].iloc[idx-1]),'timestamp':data[cluster][trace]['aggregated_values']['upsampled_timestamps'][t]}, ignore_index=True)
     data[cluster][trace]['aggregated_values']['pcap'] = data[cluster][trace]['aggregated_values']['pcap'].set_index('timestamp')
-    if (experiment_type == 'preliminaries') or (experiment_type == 'static_characteristic'):
-        data[cluster][trace]['aggregated_values']['pcap'] = pd.DataFrame({'pcap':int(data[cluster][trace]['parameters']['powercap']),'timestamp':data[cluster][trace]['aggregated_values']['upsampled_timestamps'][0]}, index=[0])
-        for t in range(1,len(data[cluster][trace]['aggregated_values']['upsampled_timestamps'])):
-            data[cluster][trace]['aggregated_values']['pcap'] = data[cluster][trace]['aggregated_values']['pcap'].append({'pcap':int(data[cluster][trace]['parameters']['powercap']),'timestamp':data[cluster][trace]['aggregated_values']['upsampled_timestamps'][t]}, ignore_index=True)
-        data[cluster][trace]['aggregated_values']['pcap'] = data[cluster][trace]['aggregated_values']['pcap'].set_index('timestamp')
-    data[cluster][trace]['aggregated_values']['progress_frequency_median'] = data[cluster][trace]['aggregated_values']['progress_frequency_median'].set_index('timestamp')
+
 
 
 
@@ -135,7 +116,7 @@ plt.rcParams.update({'font.size': 14})
 
 
 plotted_traces = {
-    'gros':'preliminaries_stream_c_2021-02-17T17:08:58+01:00'
+    'gros':'preliminaries_stream_c_2021-02-17T11:04:41+01:00'
     }
 
 
