@@ -19,32 +19,31 @@ tau = 0.33
 pcap_data = DE.data_gen(pcap_data = True)
 
 
-def progress_model(p_now, p_cap,T_S):
-    pcap_old_L = -np.exp(-alpha[cluster] * (a[cluster] * p_now + b[cluster] - beta[cluster]))
-    return K_L[cluster] * T_S / (T_S + tau) * pcap_old_L + tau / (T_S + tau) * (p_cap - K_L[cluster]) + K_L[cluster]
+def progress_model(prog_now, prev_p_cap,T_S):
+    pcap_old_L = -np.exp(-alpha[cluster] * (a[cluster] * prev_p_cap + b[cluster] - beta[cluster]))
+    progress_value = K_L[cluster] * T_S / (T_S + tau) * pcap_old_L + tau / (T_S + tau) * (prog_now - K_L[cluster]) + K_L[cluster]
+    return progress_value
     
     
 
-pcap_data['progress_model'] = pd.DataFrame({'progress_model':K_L[cluster]*(1 + -np.exp( -alpha[cluster]*( a[cluster]*pcap_data['pcap'].iloc[0] + b[cluster] - beta[cluster] ) )),'timestamp':pcap_data['upsampled_timestamps'][0]}, index=[0])
-pcap_data['progress_model'] = pcap_data['progress_model'].append({'progress_model':K_L[cluster]*(1 + -np.exp( -alpha[cluster]*( a[cluster]*pcap_data['pcap'].iloc[1][0] + b[cluster] - beta[cluster] ) )),'timestamp':pcap_data['upsampled_timestamps'][1]}, ignore_index=True)
-progress = []
-powercap = []
-for t in range(2,len(pcap_data['upsampled_timestamps'])):
-    p_c = pcap_data['pcap']['pcap'].iloc[t-1]
-    p_n = pcap_data['progress_model']['progress_model'].iloc[-1]
-    T_S= pcap_data['upsampled_timestamps'][t] - pcap_data['upsampled_timestamps'][t-1]
-    ret_pn = progress_model(p_n,p_c,T_S)
-    RESULT.append(ret_pn)
-    ACTION.append(p_c)
-    pcap_data['progress_model'] = pcap_data['progress_model'].append({'progress_model':ret_pn,'timestamp':pcap_data['upsampled_timestamps'][t]}, ignore_index=True)
-# pcap_data['progress_model'] = pcap_data['progress_model'].set_index('timestamp')
+time = pcap_data['upsampled_timestamps']
+progress = [0]
+pcap = pcap_data['pcap'].values.tolist()
+first_progress = K_L[cluster] * (1 + -np.exp(-alpha[cluster] * (a[cluster] * pcap[1][0] + b[cluster] - beta[cluster])))
+progress.append(first_progress)
+for t in range(2,len(time)):
+    pre_p_cap = pcap[t-1][0]
+    pre_prog = progress[t-1]
+    T_S = time[t] - time[t - 1]
+    progress.append(progress_model(pre_prog,pre_p_cap,T_S))
+
 
 
 fig, axs = plt.subplots(2)
 fig.suptitle('power and performance against time')
-axs[0].plot(pcap_data['upsampled_timestamps'][:-2], ACTION, 'go')
+axs[0].plot(pcap_data['upsampled_timestamps'], pcap, 'go')
 axs[0].set(xlabel='time', ylabel='power cap')
-axs[1].plot(pcap_data['upsampled_timestamps'][:-2], np.reshape(RESULT,(len(RESULT),1)), 'ro')
+axs[1].plot(pcap_data['upsampled_timestamps'], np.reshape(progress,(len(progress),1)), 'ro')
 axs[1].set(xlabel='time', ylabel='performance')
 
 plt.show()

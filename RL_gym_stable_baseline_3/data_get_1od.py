@@ -12,8 +12,8 @@ import seaborn as sns
 def data_gen(pcap_data = False, progress_data = False):
     exp_type = 'identification'
     experiment_type = exp_type
-    experiment_dir = '/home/akhilesh.raj/Desktop/ANL_repo/europar-96-artifacts/dataset/'+exp_type+'/experiments-data/'
-    #experiment_dir = '/Users/akhilesh/Desktop/europar-96-artifacts/dataset/'+exp_type+'/experiments-data/'
+    # experiment_dir = '/home/akhilesh.raj/Desktop/ANL_repo/europar-96-artifacts/dataset/'+exp_type+'/experiments-data/'
+    experiment_dir = '/Users/akhilesh/Desktop/europar-96-artifacts/dataset/'+exp_type+'/experiments-data/'
     clusters = next(os.walk(experiment_dir))[1]
 
 
@@ -109,15 +109,15 @@ def data_gen(pcap_data = False, progress_data = False):
 
 
 
-    clusters_styles = {'yeti':'black','gros':'orange','dahu':'skyblue'}
-    clusters_markers = {'yeti':'o','gros':'x','dahu':'v'}
+    # clusters_styles = {'yeti':'black','gros':'orange','dahu':'skyblue'}
+    # clusters_markers = {'yeti':'o','gros':'x','dahu':'v'}
     plt.rcParams.update({'font.size': 14})
 
 
 
     plotted_traces = {
-        #'gros':'preliminaries_stream_c_2021-02-17T11:04:41+01:00'
-    'gros':'preliminaries_stream_c_2021-02-17T17:08:58+01:00'
+        'gros':'preliminaries_stream_c_2021-02-17T11:04:41+01:00'
+    # 'gros':'preliminaries_stream_c_2021-02-17T17:08:58+01:00'
         }
 
 
