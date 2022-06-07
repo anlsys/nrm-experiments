@@ -35,6 +35,7 @@ for t in range(2,len(time)):
     pre_p_cap = pcap[t-1][0]
     pre_prog = progress[t-1]
     T_S = time[t] - time[t - 1]
+    print(T_S)
     progress.append(progress_model(pre_prog,pre_p_cap,T_S))
 
 

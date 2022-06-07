@@ -12,8 +12,8 @@ import seaborn as sns
 def data_gen(pcap_data = False, progress_data = False):
     exp_type = 'identification'
     experiment_type = exp_type
-    # experiment_dir = '/home/akhilesh.raj/Desktop/ANL_repo/europar-96-artifacts/dataset/'+exp_type+'/experiments-data/'
-    experiment_dir = '/Users/akhilesh/Desktop/europar-96-artifacts/dataset/'+exp_type+'/experiments-data/'
+    experiment_dir = '/home/akhilesh.raj/Desktop/ANL_repo/europar-96-artifacts/dataset/'+exp_type+'/experiments-data/'
+    #experiment_dir = '/Users/akhilesh/Desktop/europar-96-artifacts/dataset/'+exp_type+'/experiments-data/'
     clusters = next(os.walk(experiment_dir))[1]
 
 
@@ -116,8 +116,8 @@ def data_gen(pcap_data = False, progress_data = False):
 
 
     plotted_traces = {
-        'gros':'preliminaries_stream_c_2021-02-17T11:04:41+01:00'
-    # 'gros':'preliminaries_stream_c_2021-02-17T17:08:58+01:00'
+        #'gros':'preliminaries_stream_c_2021-02-17T11:04:41+01:00'
+    'gros':'preliminaries_stream_c_2021-02-17T17:08:58+01:00'
         }
 
 
@@ -141,25 +141,25 @@ def data_gen(pcap_data = False, progress_data = False):
 
 
     my_trace = plotted_traces[cluster]
-    x_zoom = [0,len(data[cluster][my_trace]['aggregated_values']['pcap'])]
-    fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(5.7,6.6))
-    data[cluster][my_trace]['aggregated_values']['progress_frequency_median']['median'].plot(color='k',ax=axes[0], marker='o', markersize=3, linestyle='')
-    data[cluster][my_trace]['aggregated_values']['progress_model'].plot(color='skyblue',ax=axes[0], linewidth=2)#, marker="d", markersize=3)
-    axes[0].set_ylabel('Progress [Hz]')
-    axes[0].set_xlabel('')
-    axes[0].legend(['cluster: '+cluster])
-    axes[0].legend(['Measure','Model'],fontsize='small')
-    axes[0].set_ylim([0,75])
-    axes[0].set_xlim(x_zoom)
-    axes[0].grid(True)
-    data[cluster][my_trace]['aggregated_values']['pcap'].plot(color='k',ax=axes[1], style=".")#, style="+",  markersize=4)
-    data[cluster][my_trace]['rapl_sensors']['value0'].plot(color='palevioletred',ax=axes[1], style="+")#, style="+",  markersize=4)
-    axes[1].set_ylabel('Power [W]')
-    axes[1].set_xlabel('Time [s]')
-    axes[1].set_ylim([30,130])
-    axes[1].legend(['Powercap','Measure'],fontsize='small',ncol=1)
-    axes[1].grid(True)
-    axes[1].set_xlim(x_zoom)
+    # x_zoom = [0,len(data[cluster][my_trace]['aggregated_values']['pcap'])]
+    # fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(5.7,6.6))
+    # data[cluster][my_trace]['aggregated_values']['progress_frequency_median']['median'].plot(color='k',ax=axes[0], marker='o', markersize=3, linestyle='')
+    # data[cluster][my_trace]['aggregated_values']['progress_model'].plot(color='skyblue',ax=axes[0], linewidth=2)#, marker="d", markersize=3)
+    # axes[0].set_ylabel('Progress [Hz]')
+    # axes[0].set_xlabel('')
+    # axes[0].legend(['cluster: '+cluster])
+    # axes[0].legend(['Measure','Model'],fontsize='small')
+    # axes[0].set_ylim([0,75])
+    # axes[0].set_xlim(x_zoom)
+    # axes[0].grid(True)
+    # data[cluster][my_trace]['aggregated_values']['pcap'].plot(color='k',ax=axes[1], style=".")#, style="+",  markersize=4)
+    # data[cluster][my_trace]['rapl_sensors']['value0'].plot(color='palevioletred',ax=axes[1], style="+")#, style="+",  markersize=4)
+    # axes[1].set_ylabel('Power [W]')
+    # axes[1].set_xlabel('Time [s]')
+    # axes[1].set_ylim([30,130])
+    # axes[1].legend(['Powercap','Measure'],fontsize='small',ncol=1)
+    # axes[1].grid(True)
+    # axes[1].set_xlim(x_zoom)
 
     if pcap_data:
         return data[cluster][my_trace]['aggregated_values']

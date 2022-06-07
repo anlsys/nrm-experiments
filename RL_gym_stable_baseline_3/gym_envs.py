@@ -5,7 +5,8 @@ from gym.spaces import Discrete, Box
 import numpy as np
 import random
 import matplotlib.pyplot as plt
-from stable_baselines3 import DDPG
+from stable_baselines3 import PPO
+from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
 from datetime import datetime
 
 
@@ -19,7 +20,6 @@ def env_def(in_data):
     alpha = {'gros':0.047,'dahu':0.032,'yeti':0.023}
     beta = {'gros':28.5,'dahu':34.8,'yeti':33.7}
     K_L = {'gros':25.6,'dahu':42.4,'yeti':78.5}
-    # analytically found parameter
     tau = 0.33
 
     IN_MIN = in_data['pcap'].pcap.min()
@@ -31,50 +31,34 @@ def env_def(in_data):
     print(OBS_MIN)
     print(OBS_MAX)
 
-    # def progress_funct(p_now,p_cap):
-    #     p_next = K_L['gros']*dt/(dt+tau)*p_cap+tau/(dt+tau)*p_now
-    #     return p_next
 
-    def progress_model(p_now,p_cap):
-        pcap_old_L = -np.exp(-alpha[cluster] * (a[cluster] * in_data['pcap'].iloc[t - 1] + b[cluster] - beta[cluster]))
-        T_S = in_data['upsampled_timestamps'][t] - in_data['upsampled_timestamps'][t - 1]
-        in_data['progress_model'] = in_data['progress_model'].append({'progress_model': K_L[cluster] * T_S / (T_S + tau) * pcap_old_L[0] + tau / (
-                    T_S + tau) * (in_data['progress_model']['progress_model'].iloc[-1] - K_L[cluster]) + K_L[cluster],'timestamp':in_data['upsampled_timestamps'][
-                                          t]}, ignore_index=True)
+    def progress_model(prog_now, prev_p_cap, T_S):
+        pcap_old_L = -np.exp(-alpha[cluster] * (a[cluster] * prev_p_cap + b[cluster] - beta[cluster]))
+        progress_value = K_L[cluster] * T_S / (T_S + tau) * pcap_old_L + tau / (T_S + tau) * (prog_now - K_L[cluster]) + \
+                         K_L[cluster]
+        return progress_value
 
-    fig, axs = plt.subplots(2)
-    fig.suptitle('power and performance against time')
-    # In[62]:
 
 
     class Custom_env(Env):
         def __init__(self):
-            # Actions we can are set of pcaps between 0 - 1
-    #         self.action_space = Discrete(3)
-    #         self.action_space = Box(low=np.array([0,0]),high = np.array([1,1]))
             self.action_space = Box(low=np.float32(np.array([IN_MIN])), high=np.float32(np.array([IN_MAX])))
-            # Observation of the current performance (state space)
+            print(IN_MIN,IN_MAX,OBS_MIN,OBS_MAX)
             self.observation_space = Box(low=np.float32(np.array([OBS_MIN])), high=np.float32(np.array([OBS_MAX])))
-            # Set starting space
-            # self.state = np.random.rand(1,1)
             self.state = random.uniform(OBS_MIN,OBS_MAX).reshape(1,1)
-            # Set execution length
             self.execution_time = 350
             self.current_step = 0
             self.action = None
 
         def step(self, action, testing=False):
-
-            new_state = progress_funct(self.state,action)
+            T_S = 1
+            new_state = progress_model(self.state,action,T_S)
             self.state = new_state
             self.action = action
-    #         print(x_res_train,"++",self.state)
 
-            # Calculate reward
-            reward = np.linalg.norm(self.state) - np.linalg.norm(action**2)
+            reward = np.linalg.norm(self.action**2)+np.linalg.norm(self.state)
             self.R = reward
-            # Check if the sim is done
-    #         print(T,self.execution_time)
+
             if not testing:
                 if self.current_step >= self.execution_time:
                     done = True
@@ -82,23 +66,12 @@ def env_def(in_data):
                     done = False
 
                 info = {}
-                # self.render(self.current_step)
                 self.current_step+=1
 
             else:
                 self.render()
 
             return self.state, reward, done, info
-
-        def render(self):
-            print(self.current_step, self.state,self.action)
-            axs[0].plot(self.current_step,self.state,'go')
-            axs[0].set(xlabel = 'time',ylabel = 'performance')
-            axs[1].plot(self.current_step,self.action,'ro')
-            axs[1].set(xlabel = 'time',ylabel = 'power cap')
-
-            self.total += self.R
-            self.cost += self.action
 
         def reset(self):
 
@@ -109,54 +82,40 @@ def env_def(in_data):
             self.cost = 0
             return self.state
 
-
-
-    # In[63]:
-
+    action_noise = NormalActionNoise(mean=0.1, sigma=0.2)
 
     env = Custom_env()
-
-
-
-
     env.action_space.sample()
-
-
-
-
     test_obs = env.observation_space.sample()
+    print(test_obs)
+    model = PPO("MlpPolicy", env, verbose=1)
+    model.learn(total_timesteps=10000)
+    time = in_data['upsampled_timestamps']
+    progress_M = [0]
+    progress_actual = [0]
+    pcap = in_data['pcap'].values.tolist()
+    first_progress = K_L[cluster] * (
+                1 + -np.exp(-alpha[cluster] * (a[cluster] * pcap[1][0] + b[cluster] - beta[cluster])))
+    progress_M.append(first_progress)
+    progress_actual.append(first_progress)
 
+    fig1, axs1 = plt.subplots(2)
+    fig1.suptitle('power and performance against time with RL')
 
+    for t in range(2, len(time)):
 
+        pre_prog_model = progress_M[t - 1]
+        T_S = time[t] - time[t - 1]
+        action, _states = model.predict(pre_prog_model.reshape(1,))
+        next_model_observation = progress_model(pre_prog_model,action,T_S)
+        progress_M.append(next_model_observation)
+        axs1[0].plot(t,action, 'go')
+        axs1[0].set(xlabel='time', ylabel='power cap')
+        axs1[1].plot(t,next_model_observation, 'ro')
+        axs1[1].set(xlabel='time', ylabel='performance')
 
-    model = DDPG("MlpPolicy", env, verbose=1)
-    model.learn(total_timesteps=1000)
-
-
-
-
-
-    obs = env.reset()
-    count = 0
-    # while count < 100:
-    for t in range(1, len(in_data['upsampled_timestamps'])):
-        obs = in_data['progress_model']['progress_model'].iloc[t].reshape(1,1)
-        act = in_data['pcap']['pcap'].iloc[t].reshape(1,1)
-        # print(obs)
-        action, _states = model.predict(obs)
-        true_out = progress_funct(obs,act)
-        obs, rewards, dones, info = env.step(action, testing=True)
-
-        # print(obs)
-        count += 1
-        # env.render(count)
-
-
-    print(env.cost,env.total)
 
 
 if __name__ == "__main__":
     env_def()
-    now = datetime.now()
-    plt.savefig("./Figures/Figure_"+str(now)+".png")
     plt.show()
